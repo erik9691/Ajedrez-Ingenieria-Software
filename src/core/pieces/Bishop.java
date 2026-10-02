@@ -1,61 +1,22 @@
 package core.pieces;
 
-import java.util.List;
-
-import core.interfaces.Board;
-import core.interfaces.Movement;
-import core.interfaces.Piece;
-import core.model.Color;
-import core.model.NormalMove;
-import core.model.Pos;
+import core.boards.Board;
+import core.models.Position;
 
 public class Bishop extends Piece {
 
-    public Bishop(Color color) {
-        super(color);
+    public Bishop(boolean isWhite) {
+        super(isWhite);
     }
 
     @Override
-    public List<Pos> getValidMoves(Board board, Pos from) {
-        return List.of(); // pendiente
+    public boolean canMove(Board board, Position start, Position end) {
+        int rowDifference = Math.abs(end.row() - start.row());
+        int columnDifference = Math.abs(end.column() - start.column());
+        // Tiene que moverse en diagonal
+        if (rowDifference != columnDifference) {
+            return false;
+        }
+        return board.isPathClear(start, end);
     }
-
-    @Override
-    public Movement move(Board board, Pos origin, Pos dest){
-        if (origin.equals(dest)) {
-            return null;
-        }
-
-        if (dest.row() < 0 || dest.row() >= board.getRows()
-                || dest.col() < 0 || dest.col() >= board.getColumns()) {
-            return null;
-        }
-
-        if (Math.abs(dest.row() - origin.row()) != Math.abs(dest.col() - origin.col())) {
-            return null;
-        }
-
-        int rowStep = Integer.compare(dest.row(), origin.row());
-        int colStep = Integer.compare(dest.col(), origin.col());
-
-        int row = origin.row() + rowStep;
-        int col = origin.col() + colStep;
-        while (row != dest.row() || col != dest.col()) {
-            if (!board.isEmpty(new Pos(row, col))) {
-                return null;
-            }
-            row += rowStep;
-            col += colStep;
-        }
-
-        if (!board.isEmpty(dest) && board.pieceAt(dest).getColor() == color) {
-            return null;
-        }
-
-        Piece captured = board.pieceAt(dest);
-        board.placePiece(this, dest);
-        board.placePiece(null, origin);
-        return new NormalMove(origin, dest, captured);
-    }
-
 }
