@@ -1,6 +1,7 @@
 package core.pieces;
 
-import core.boards.Board;
+import core.api.Piece;
+import core.api.Board;
 import core.models.Position;
 
 public class Pawn extends Piece {

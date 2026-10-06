@@ -1,10 +1,9 @@
-package core.pieces;
+package core.api;
 
-import core.boards.Board;
 import core.models.Position;
 
 public abstract class Piece {
-    boolean isWhite;
+    protected boolean isWhite;
 
     public Piece(boolean isWhite) {
         this.isWhite = isWhite;

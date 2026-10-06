@@ -4,19 +4,39 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import core.api.Board;
+import core.api.Piece;
 import core.models.Position;
 import core.pieces.Bishop;
 import core.pieces.King;
-import core.pieces.Piece;
 import core.pieces.Queen;
 import core.pieces.Rook;
 
-public class Board {
-    private Piece[][] squares;
+public class ClassicBoard extends Board {
     private final Map<Piece, Position> piecePositions = new HashMap<>();
 
-    public Board() {
+    public ClassicBoard() {
         this.squares = new Piece[8][8];
+    }
+
+    public Piece getPiece(Position position) {
+        // Validar si las posicion elegida esta adentro del tablero
+        if (!isValidPosition(position)) {
+            return null;
+        }        
+        return squares[position.row()][position.column()];
+    }
+
+    public void setPiece(Position position, Piece piece) {
+        Piece previous = squares[position.row()][position.column()];
+        // Si se reemplaza o se saca una pieza, se la quita del diccionario
+        if (previous != null) {
+            piecePositions.remove(previous);
+        }
+        if (piece != null) {
+            piecePositions.put(piece, position);
+        }
+        squares[position.row()][position.column()] = piece;
     }
 
     public boolean tryMove(Position start, Position end) {
@@ -42,6 +62,50 @@ public class Board {
 
         return true;
     }
+
+    public boolean isPathClear(Position start, Position end) {
+        int rowDirection = Integer.compare(end.row(), start.row());
+        int columnDirection = Integer.compare(end.column(), start.column());
+
+        int row = start.row() + rowDirection;
+        int column = start.column() + columnDirection;
+
+        // Pasa por cada cuadrado que hay en el camino y valida que no haya pieza
+        while (row != end.row() || column != end.column()) {
+
+            if (squares[row][column] != null) {
+                return false;
+            }
+
+            row += rowDirection;
+            column += columnDirection;
+        }
+
+        return true;
+    }
+
+    //Lógica provisoria
+    public boolean isCheckmate(boolean isWhite) {
+        // Si no esta en jaque, no es jaque mate
+        if (!isChecked(isWhite)) {
+            return false;
+        }
+        // Si puede mover el rey, no es jaque mate
+        if (tryKingMoves(isWhite)) {
+            return false;
+        }
+        // Si puede capturar la pieza que da jaque, no es jaque mate
+        if (tryCaptureChecker(isWhite)) {
+            return false;
+        }
+        // Si puede interponerse entre la pieza que da jaque y el rey, no es jaque mate
+        if (tryBlockMoves(isWhite)) {
+            return false;
+        }
+        return true;
+    }
+
+
 
     private boolean isValidPosition(Position position) {
         return position.row() >= 0 && position.row() < 8 && position.column() >= 0 && position.column() < 8;
@@ -73,7 +137,9 @@ public class Board {
         return false;
     }
 
-    public boolean tryKingMoves(boolean isWhite) {
+
+
+    private boolean tryKingMoves(boolean isWhite) {
         Piece kingPiece = findPiece(King.class, isWhite);
         if (kingPiece == null) {
             return false;
@@ -103,7 +169,7 @@ public class Board {
         return false;
     }
 
-    public boolean tryCaptureChecker(boolean isWhite) {
+    private boolean tryCaptureChecker(boolean isWhite) {
         Piece kingPiece = findPiece(King.class, isWhite);
         if (kingPiece == null) {
             return false;
@@ -141,7 +207,7 @@ public class Board {
         return false;
     }
 
-    public boolean tryBlockMoves(boolean isWhite) {
+    private boolean tryBlockMoves(boolean isWhite) {
         Piece kingPiece = findPiece(King.class, isWhite);
         if (kingPiece == null) {
             return false;
@@ -192,44 +258,4 @@ public class Board {
         return false;
     }
 
-    public Piece getPiece(Position position) {
-        // Validar si las posicion elegida esta adentro del tablero
-        if (!isValidPosition(position)) {
-            return null;
-        }        
-        return squares[position.row()][position.column()];
-    }
-
-    public void setPiece(Position position, Piece piece) {
-        Piece previous = squares[position.row()][position.column()];
-        // Si se reemplaza o se saca una pieza, se la quita del diccionario
-        if (previous != null) {
-            piecePositions.remove(previous);
-        }
-        if (piece != null) {
-            piecePositions.put(piece, position);
-        }
-        squares[position.row()][position.column()] = piece;
-    }
-
-    public boolean isPathClear(Position start, Position end) {
-        int rowDirection = Integer.compare(end.row(), start.row());
-        int columnDirection = Integer.compare(end.column(), start.column());
-
-        int row = start.row() + rowDirection;
-        int column = start.column() + columnDirection;
-
-        // Pasa por cada cuadrado que hay en el camino y valida que no haya pieza
-        while (row != end.row() || column != end.column()) {
-
-            if (squares[row][column] != null) {
-                return false;
-            }
-
-            row += rowDirection;
-            column += columnDirection;
-        }
-
-        return true;
-    }
 }
