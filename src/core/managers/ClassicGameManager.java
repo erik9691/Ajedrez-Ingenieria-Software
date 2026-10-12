@@ -30,7 +30,7 @@ public class ClassicGameManager extends GameManager {
 
     public boolean makeMove(Position start, Position end) {
         Piece piece = board.getPiece(start);
-        // Valida que haya elegido una pieza
+        // Valida que haya elegido una pieza para que .getColor no devuelva un error
         if (piece == null) {
             return false;
         }
@@ -50,17 +50,8 @@ public class ClassicGameManager extends GameManager {
 
     //Logica provisoria 
     public boolean endGame() {
-        return board.isCheckmate(whiteTurn);
+        return board.isCheckmated(whiteTurn);
     }
-
-
-
-
-
-
-
-
-
 
     private void initializeBoard() {
         // Piezas negras

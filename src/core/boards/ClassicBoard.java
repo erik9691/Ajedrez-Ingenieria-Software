@@ -28,10 +28,10 @@ public class ClassicBoard extends Board {
     }
 
     public void setPiece(Position position, Piece piece) {
-        Piece previous = squares[position.row()][position.column()];
+        Piece previousPiece = squares[position.row()][position.column()];
         // Si se reemplaza o se saca una pieza, se la quita del diccionario
-        if (previous != null) {
-            piecePositions.remove(previous);
+        if (previousPiece != null) {
+            piecePositions.remove(previousPiece);
         }
         if (piece != null) {
             piecePositions.put(piece, position);
@@ -40,9 +40,12 @@ public class ClassicBoard extends Board {
     }
 
     public boolean tryMove(Position start, Position end) {
-
         Piece startPiece = getPiece(start);
         Piece endPiece = getPiece(end);
+        // Validar que se haya elegido una pieza para mover
+        if (startPiece == null) {
+            return false;
+        }
         // Validar que la pieza a comer es de otro color
         if (endPiece != null && endPiece.getColor() == startPiece.getColor()) {
             return false;
@@ -51,9 +54,10 @@ public class ClassicBoard extends Board {
         if (!startPiece.canMove(this, start, end)) {
             return false;
         }
+        // Mueve la pieza
         setPiece(start, null);
         setPiece(end, startPiece);
-
+        // Si al final del movimiento está en jaque no se permite el movimiento
         if (isChecked(startPiece.getColor())){
             setPiece(end, endPiece);
             setPiece(start, startPiece);
@@ -85,7 +89,7 @@ public class ClassicBoard extends Board {
     }
 
     //Lógica provisoria
-    public boolean isCheckmate(boolean isWhite) {
+    public boolean isCheckmated(boolean isWhite) {
         // Si no esta en jaque, no es jaque mate
         if (!isChecked(isWhite)) {
             return false;
@@ -104,8 +108,6 @@ public class ClassicBoard extends Board {
         }
         return true;
     }
-
-
 
     private boolean isValidPosition(Position position) {
         return position.row() >= 0 && position.row() < 8 && position.column() >= 0 && position.column() < 8;
@@ -140,6 +142,7 @@ public class ClassicBoard extends Board {
 
 
     private boolean tryKingMoves(boolean isWhite) {
+        // Busca al rey y obtiene su posicion
         Piece kingPiece = findPiece(King.class, isWhite);
         if (kingPiece == null) {
             return false;
@@ -148,18 +151,11 @@ public class ClassicBoard extends Board {
         // Prueba las 8 casillas adyacentes al rey
         for (int rowOffset = -1; rowOffset <= 1; rowOffset++) {
             for (int columnOffset = -1; columnOffset <= 1; columnOffset++) {
-                if (rowOffset == 0 && columnOffset == 0) {
-                    continue;
-                }
-                Position to = new Position(
-                        kingPosition.row() + rowOffset,
-                        kingPosition.column() + columnOffset);
-                if (!isValidPosition(to)) {
-                    continue;
-                }
+                Position to = new Position(kingPosition.row() + rowOffset, kingPosition.column() + columnOffset);
+                // Simula el movimiento para validar si un movimiento lo saca del jaque
                 Piece captured = getPiece(to);
                 if (tryMove(kingPosition, to)) {
-                    // Revertir la simulacion, primero el destino y despues el origen
+                    // Revertir la simulacion
                     setPiece(to, captured);
                     setPiece(kingPosition, kingPiece);
                     return true;
@@ -198,7 +194,7 @@ public class ClassicBoard extends Board {
                 continue;
             }
             if (tryMove(from, checkerPosition)) {
-                // Revertir la simulacion, primero el destino y despues el origen
+                // Revertir la simulacion
                 setPiece(checkerPosition, checkerPiece);
                 setPiece(from, piece);
                 return true;
@@ -246,7 +242,7 @@ public class ClassicBoard extends Board {
                     continue;
                 }
                 if (tryMove(from, between)) {
-                    // Revertir la simulacion, primero el destino y despues el origen
+                    // Revertir la simulacion
                     setPiece(between, null);
                     setPiece(from, piece);
                     return true;

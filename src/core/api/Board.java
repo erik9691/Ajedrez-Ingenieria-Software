@@ -13,5 +13,5 @@ public abstract class Board {
 
     public abstract boolean isPathClear(Position start, Position end);
 
-    public abstract boolean isCheckmate(boolean isWhite);
+    public abstract boolean isCheckmated(boolean isWhite);
 }
