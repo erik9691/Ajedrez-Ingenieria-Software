@@ -9,8 +9,11 @@ import core.pieces.Knight;
 import core.pieces.Pawn;
 import core.pieces.Queen;
 import core.pieces.Rook;
+import ports.BoardView;
 import ports.DisplayPort;
 import ports.GameInputPort;
+import ports.MoveResult;
+import ports.PieceView;
 
 public class GameManager implements GameInputPort{
     private boolean whiteTurn;
@@ -28,8 +31,8 @@ public class GameManager implements GameInputPort{
         this.whiteTurn = true;
         
         // Notificaciones iniciales
-        displayPort.displayMessage("Game started!");
-        displayPort.displayBoard(this.board);
+        displayPort.displayMessage("¡Comienza la partida!");
+        displayPort.displayBoard(toView());
         displayPort.displayTurn(whiteTurn);
     }
 
@@ -38,36 +41,35 @@ public class GameManager implements GameInputPort{
     }
 
     @Override
-    public boolean movePiece(Position start, Position end) {
+    public boolean movePiece(int fromRow, int fromColumn, int toRow, int toColumn) {
+        Position start = new Position(fromRow, fromColumn);
+        Position end = new Position(toRow, toColumn);
         Piece piece = board.getPiece(start);
-        
+
         // Valida que haya elegido una pieza para que .getColor no devuelva un error
         if (piece == null) {
-            displayPort.displayError("Invalid move: No piece at the selected position.");
-            return false;
+            return reject(MoveResult.NO_PIECE);
         }
-        
+
         // Valida que sea el color correcto
         if (piece.getColor() != whiteTurn) {
-            displayPort.displayError("Invalid move: It is not your turn.");
-            return false;
+            return reject(MoveResult.NOT_YOUR_TURN);
         }
-        
+
         // Intenta el movimiento
         if (!board.tryMove(start, end)) {
-            displayPort.displayError("Invalid move: The piece cannot move there.");
-            return false;
+            return reject(MoveResult.ILLEGAL_MOVE);
         }
-        
+
         // Cambia el turno
         whiteTurn = !whiteTurn;
 
         // Actualiza el tablero en pantalla tras un movimiento exitoso
-        displayPort.displayBoard(this.board);
+        displayPort.displayBoard(toView());
 
         // Verifica si el movimiento causó el fin del juego
         if (isGameOver()) {
-            displayPort.displayMessage("Game Over! Checkmate.");
+            displayPort.displayMessage("¡Fin del juego! Jaque mate.");
         } else {
             // Si el juego continúa, muestra el nuevo turno
             displayPort.displayTurn(whiteTurn);
@@ -76,9 +78,29 @@ public class GameManager implements GameInputPort{
         return true;
     }
 
+    // Informa el rechazo por el puerto de salida y devuelve false
+    private boolean reject(MoveResult reason) {
+        displayPort.displayMoveRejected(reason);
+        return false;
+    }
+
     @Override
     public boolean isGameOver() {
         return board.isCheckmated(whiteTurn);
+    }
+
+    // Convierte el tablero del dominio en una vista de solo lectura para los adaptadores.
+    private BoardView toView() {
+        PieceView[][] cells = new PieceView[BoardView.SIZE][BoardView.SIZE];
+        for (int row = 0; row < BoardView.SIZE; row++) {
+            for (int column = 0; column < BoardView.SIZE; column++) {
+                Piece piece = board.getPiece(new Position(row, column));
+                if (piece != null) {
+                    cells[row][column] = new PieceView(piece.getSymbol(), piece.getColor());
+                }
+            }
+        }
+        return new BoardView(cells);
     }
 
     private void initializeBoard() {

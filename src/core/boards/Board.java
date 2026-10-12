@@ -40,6 +40,10 @@ public class Board {
     }
 
     public boolean tryMove(Position start, Position end) {
+        // Evita salirse del tablero (ej. el rey en un borde probando casillas adyacentes)
+        if (!isValidPosition(start) || !isValidPosition(end)) {
+            return false;
+        }
         Piece startPiece = getPiece(start);
         Piece endPiece = getPiece(end);
         // Validar que se haya elegido una pieza para mover

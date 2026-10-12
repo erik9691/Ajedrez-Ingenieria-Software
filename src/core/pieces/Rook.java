@@ -19,4 +19,9 @@ public class Rook extends Piece {
         // Revisar que no haya nada en el camino
         return board.isPathClear(start, end);
     }
+
+    @Override
+    public char getSymbol() {
+        return 'R';
+    }
 }

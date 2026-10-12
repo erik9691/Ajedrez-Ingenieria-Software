@@ -25,4 +25,9 @@ public class Queen extends Piece {
 
         return board.isPathClear(start, end);
     }
+
+    @Override
+    public char getSymbol() {
+        return 'Q';
+    }
 }

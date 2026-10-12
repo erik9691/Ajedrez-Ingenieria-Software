@@ -20,4 +20,9 @@ public class Bishop extends Piece {
         }
         return board.isPathClear(start, end);
     }
+
+    @Override
+    public char getSymbol() {
+        return 'B';
+    }
 }

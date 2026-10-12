@@ -17,4 +17,9 @@ public class Knight extends Piece {
         // la posicion final debe estar a 2 posiciones horizontales y 1 vertical o 2 vertical y 1 horizontal
         return (rowDifference == 2 && columnDifference == 1) || (rowDifference == 1 && columnDifference == 2);
     }
+
+    @Override
+    public char getSymbol() {
+        return 'N';
+    }
 }

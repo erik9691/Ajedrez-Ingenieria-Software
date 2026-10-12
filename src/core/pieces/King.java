@@ -17,4 +17,9 @@ public class King extends Piece {
         // El destino tiene que estar a 1 de horizontal y/o 1 de vertical
         return rowDifference <= 1 && columnDifference <= 1;
     }
+
+    @Override
+    public char getSymbol() {
+        return 'K';
+    }
 }
