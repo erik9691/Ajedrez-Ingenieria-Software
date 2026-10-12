@@ -1,8 +1,7 @@
 package core.managers;
 
-import core.api.Piece;
-import core.api.Board;
-import core.api.GameManager;
+import core.boards.Board;
+import core.models.Piece;
 import core.models.Position;
 import core.pieces.Bishop;
 import core.pieces.King;
@@ -10,46 +9,75 @@ import core.pieces.Knight;
 import core.pieces.Pawn;
 import core.pieces.Queen;
 import core.pieces.Rook;
+import ports.DisplayPort;
+import ports.GameInputPort;
 
-public class ClassicGameManager extends GameManager {
+public class GameManager implements GameInputPort{
     private boolean whiteTurn;
     private Board board;
+    private DisplayPort displayPort;
 
-    public ClassicGameManager(Board board) {
-        super(board);
+    public GameManager(Board board, DisplayPort displayPort) {
+        this.board = board;
+        this.displayPort = displayPort;
     }
     
+    @Override 
     public void startGame() {
         initializeBoard();
         this.whiteTurn = true;
+        
+        // Notificaciones iniciales
+        displayPort.displayMessage("Game started!");
+        displayPort.displayBoard(this.board);
+        displayPort.displayTurn(whiteTurn);
     }
 
     public boolean isWhiteTurn() {
         return whiteTurn;
     }
 
-    public boolean makeMove(Position start, Position end) {
+    @Override
+    public boolean movePiece(Position start, Position end) {
         Piece piece = board.getPiece(start);
+        
         // Valida que haya elegido una pieza para que .getColor no devuelva un error
         if (piece == null) {
+            displayPort.displayError("Invalid move: No piece at the selected position.");
             return false;
         }
+        
         // Valida que sea el color correcto
         if (piece.getColor() != whiteTurn) {
+            displayPort.displayError("Invalid move: It is not your turn.");
             return false;
         }
+        
         // Intenta el movimiento
         if (!board.tryMove(start, end)) {
+            displayPort.displayError("Invalid move: The piece cannot move there.");
             return false;
         }
+        
         // Cambia el turno
         whiteTurn = !whiteTurn;
+
+        // Actualiza el tablero en pantalla tras un movimiento exitoso
+        displayPort.displayBoard(this.board);
+
+        // Verifica si el movimiento causó el fin del juego
+        if (isGameOver()) {
+            displayPort.displayMessage("Game Over! Checkmate.");
+        } else {
+            // Si el juego continúa, muestra el nuevo turno
+            displayPort.displayTurn(whiteTurn);
+        }
 
         return true;
     }
 
-    //Logica provisoria 
-    public boolean endGame() {
+    @Override
+    public boolean isGameOver() {
         return board.isCheckmated(whiteTurn);
     }
 
@@ -90,5 +118,4 @@ public class ClassicGameManager extends GameManager {
         board.setPiece(new Position(7, 6), new Knight(true));
         board.setPiece(new Position(7, 7), new Rook(true));
     }
-
 }

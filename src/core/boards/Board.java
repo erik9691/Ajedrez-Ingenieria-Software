@@ -4,18 +4,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import core.api.Board;
-import core.api.Piece;
+import core.models.Piece;
 import core.models.Position;
 import core.pieces.Bishop;
 import core.pieces.King;
 import core.pieces.Queen;
 import core.pieces.Rook;
 
-public class ClassicBoard extends Board {
+public class Board {
+    protected Piece[][] squares;
     private final Map<Piece, Position> piecePositions = new HashMap<>();
 
-    public ClassicBoard() {
+    public Board() {
         this.squares = new Piece[8][8];
     }
 
