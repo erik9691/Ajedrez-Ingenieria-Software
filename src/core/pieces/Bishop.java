@@ -3,6 +3,7 @@ package core.pieces;
 import core.boards.Board;
 import core.models.Piece;
 import core.models.Position;
+import core.models.MoveVerdict;
 
 public class Bishop extends Piece {
 
@@ -11,14 +12,14 @@ public class Bishop extends Piece {
     }
 
     @Override
-    public boolean canMove(Board board, Position start, Position end) {
+    public MoveVerdict canMove(Board board, Position start, Position end) {
         int rowDifference = Math.abs(end.row() - start.row());
         int columnDifference = Math.abs(end.column() - start.column());
         // Tiene que moverse en diagonal
         if (rowDifference != columnDifference) {
-            return false;
+            return MoveVerdict.INVALID;
         }
-        return board.isPathClear(start, end);
+        return (board.isPathClear(start, end)) ? MoveVerdict.VALID : MoveVerdict.INVALID;
     }
 
     @Override

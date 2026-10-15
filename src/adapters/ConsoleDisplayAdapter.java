@@ -2,7 +2,7 @@ package adapters;
 
 import ports.BoardView;
 import ports.DisplayPort;
-import ports.MoveResult;
+import ports.PlayResult;
 import ports.PieceView;
 
 public class ConsoleDisplayAdapter implements DisplayPort {
@@ -38,11 +38,12 @@ public class ConsoleDisplayAdapter implements DisplayPort {
     }
 
     @Override
-    public void displayMoveRejected(MoveResult reason) {
+    public void displayMoveRejected(PlayResult reason) {
         String text = switch (reason) {
             case NO_PIECE -> "No hay ninguna pieza en la casilla de origen.";
             case NOT_YOUR_TURN -> "No es el turno de esa pieza.";
             case ILLEGAL_MOVE -> "La pieza no puede moverse a esa casilla.";
+            case INVALID_PROMOTION -> "Elección de promoción inválida. Usá Q, R, B o N.";
             case OK -> "";
         };
         if (!text.isEmpty()) {

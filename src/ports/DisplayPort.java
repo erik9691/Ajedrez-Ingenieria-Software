@@ -11,5 +11,5 @@ public interface DisplayPort {
     void displayTurn(boolean isWhiteTurn);
 
     // Informa que una jugada fue rechazada y por qué. El adaptador decide el texto.
-    void displayMoveRejected(MoveResult reason);
+    void displayMoveRejected(PlayResult reason);
 }

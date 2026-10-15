@@ -3,6 +3,8 @@ package core.pieces;
 import core.boards.Board;
 import core.models.Piece;
 import core.models.Position;
+import core.models.MoveVerdict;
+
 
 public class Pawn extends Piece {
 
@@ -11,7 +13,7 @@ public class Pawn extends Piece {
     }
 
     @Override
-    public boolean canMove(Board board, Position start, Position end) {
+    public MoveVerdict canMove(Board board, Position start, Position end) {
 
         int direction;
         if (isWhite) {
@@ -26,32 +28,48 @@ public class Pawn extends Piece {
 
         // Movimiento basico hacia adelante
         if (columnDifference == 0 && rowDifference == direction) {
-            return board.getPiece(end) == null;
-        }
-
-        // Constantes para saber si esta en la posicion inicial
-        int startingRow = isWhite ? 6 : 1;
-        if (isWhite) {
-            startingRow = 6;
-        } else {
-            startingRow = 1;
+            if (board.getPiece(end) != null) {
+                return MoveVerdict.INVALID;
+            }
         }
         // Si esta en la posicion inicial, se permite el movimiento de 2 hacia delante
-        if (columnDifference == 0 && start.row() == startingRow && rowDifference == 2 * direction) {
-
+        else if (columnDifference == 0 && start.row() == (isWhite ? 6 : 1) && rowDifference == 2 * direction) {
             Position middle = new Position(start.row() + direction, start.column());
             // Valida que no haya pieza en ninguna de las 2 posiciones por el que se quiere pasar
-            return board.getPiece(middle) == null && board.getPiece(end) == null;
+            if (board.getPiece(middle) != null || board.getPiece(end) != null) {
+                return MoveVerdict.INVALID;
+            }
         }
-
         // Para comer en diagonal
-        if (columnDifference == 1 && rowDifference == direction) {
+        else if (columnDifference == 1 && rowDifference == direction) {
             Piece target = board.getPiece(end);
-            // Si la pieza a comer existe y es de otro color devuelve true
-            return target != null && target.getColor() != isWhite;
+
+            // Verifica si es un movimiento de En Passant o solo es una pieza nula
+            if(target == null) {
+                Position adjacentPawnPosition = new Position(start.row(), end.column());
+                Piece adjacentPawn = board.getPiece(adjacentPawnPosition);
+                if (adjacentPawn instanceof Pawn && adjacentPawn.getColor() != isWhite) {
+                    // Verifica si el peon adyacente se movio 2 casillas en el ultimo turno
+                    if (board.wasTwoTilePawnMoved((Pawn) adjacentPawn)) {
+                        return MoveVerdict.EN_PASSANT;
+                    }
+                }
+                return MoveVerdict.INVALID;
+            }
+
+            // Si la pieza a no es de otro color
+            if (target.getColor() == isWhite) {
+                return MoveVerdict.INVALID;
+            }
+
         }
 
-        return false;
+        // Peon que llega a la ultima fila: promocion
+        if (end.row() == (isWhite ? 0 : 7)) {
+            return MoveVerdict.PROMOTION;
+        }
+
+        return MoveVerdict.VALID;
     }
 
     @Override

@@ -9,16 +9,18 @@ import core.pieces.Knight;
 import core.pieces.Pawn;
 import core.pieces.Queen;
 import core.pieces.Rook;
+import core.models.MoveResult;
 import ports.BoardView;
 import ports.DisplayPort;
 import ports.GameInputPort;
-import ports.MoveResult;
+import ports.PlayResult;
 import ports.PieceView;
 
 public class GameManager implements GameInputPort{
     private boolean whiteTurn;
     private Board board;
     private DisplayPort displayPort;
+    private Position pendingPromotion;
 
     public GameManager(Board board, DisplayPort displayPort) {
         this.board = board;
@@ -45,20 +47,23 @@ public class GameManager implements GameInputPort{
         Position start = new Position(fromRow, fromColumn);
         Position end = new Position(toRow, toColumn);
         Piece piece = board.getPiece(start);
-
-        // Valida que haya elegido una pieza para que .getColor no devuelva un error
-        if (piece == null) {
-            return reject(MoveResult.NO_PIECE);
-        }
-
+        
         // Valida que sea el color correcto
         if (piece.getColor() != whiteTurn) {
-            return reject(MoveResult.NOT_YOUR_TURN);
+            return reject(PlayResult.NOT_YOUR_TURN);
         }
 
+        MoveResult result = board.tryMove(start, end);
         // Intenta el movimiento
-        if (!board.tryMove(start, end)) {
-            return reject(MoveResult.ILLEGAL_MOVE);
+        if (result == MoveResult.ILLEGAL) {
+            return reject(PlayResult.ILLEGAL_MOVE);
+        }
+
+        // Con promoción pendiente el turno se completa recién en promotePawn
+        if (result == MoveResult.PROMOTION_PENDING) {
+            pendingPromotion = end;
+            displayPort.displayBoard(toView());
+            return true;
         }
 
         // Cambia el turno
@@ -78,8 +83,59 @@ public class GameManager implements GameInputPort{
         return true;
     }
 
+    // Informa si hay una promoción esperando la elección de pieza
+    @Override
+    public boolean isPromotionPending() {
+        return pendingPromotion != null;
+    }
+
+    // Completa la promoción pendiente y continúa el flujo del turno
+    @Override
+    public boolean promotePawn(char choice) {
+        if (pendingPromotion == null) {
+            return false;
+        }
+        Piece pawn = board.getPiece(pendingPromotion);
+        Piece promoted;
+        switch (Character.toUpperCase(choice)) {
+            case 'Q':
+                promoted = new Queen(pawn.getColor());
+                break;
+            case 'R':
+                promoted = new Rook(pawn.getColor());
+                break;
+            case 'B':
+                promoted = new Bishop(pawn.getColor());
+                break;
+            case 'N':
+                promoted = new Knight(pawn.getColor());
+                break;
+            default:
+                // Elección inválida: la promoción sigue pendiente para reintentar
+                return reject(PlayResult.INVALID_PROMOTION);
+        }
+        board.setPiece(pendingPromotion, promoted);
+        pendingPromotion = null;
+
+        // Cambia el turno
+        whiteTurn = !whiteTurn;
+
+        // Actualiza el tablero en pantalla tras un movimiento exitoso
+        displayPort.displayBoard(toView());
+
+        // Verifica si el movimiento causó el fin del juego
+        if (isGameOver()) {
+            displayPort.displayMessage("¡Fin del juego! Jaque mate.");
+        } else {
+            // Si el juego continúa, muestra el nuevo turno
+            displayPort.displayTurn(whiteTurn);
+        }
+
+        return true;
+    }
+
     // Informa el rechazo por el puerto de salida y devuelve false
-    private boolean reject(MoveResult reason) {
+    private boolean reject(PlayResult reason) {
         displayPort.displayMoveRejected(reason);
         return false;
     }

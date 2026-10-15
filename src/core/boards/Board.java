@@ -6,10 +6,15 @@ import java.util.Map;
 
 import core.models.Piece;
 import core.models.Position;
+import core.models.MoveVerdict;
+import core.models.MoveResult;
+
 import core.pieces.Bishop;
 import core.pieces.King;
 import core.pieces.Queen;
 import core.pieces.Rook;
+import core.pieces.Pawn;
+
 
 public class Board {
     protected Piece[][] squares;
@@ -39,36 +44,53 @@ public class Board {
         squares[position.row()][position.column()] = piece;
     }
 
-    public boolean tryMove(Position start, Position end) {
+    public MoveResult tryMove(Position start, Position end) {
         // Evita salirse del tablero (ej. el rey en un borde probando casillas adyacentes)
         if (!isValidPosition(start) || !isValidPosition(end)) {
-            return false;
+            return MoveResult.OUT_OF_BOUNDS;
         }
         Piece startPiece = getPiece(start);
         Piece endPiece = getPiece(end);
         // Validar que se haya elegido una pieza para mover
         if (startPiece == null) {
-            return false;
+            return MoveResult.NO_PIECE;
         }
         // Validar que la pieza a comer es de otro color
         if (endPiece != null && endPiece.getColor() == startPiece.getColor()) {
-            return false;
+            return MoveResult.OWN_PIECE_CAPTURE;
         }
         // Validacion especifica de cada pieza
-        if (!startPiece.canMove(this, start, end)) {
-            return false;
-        }
-        // Mueve la pieza
-        setPiece(start, null);
-        setPiece(end, startPiece);
-        // Si al final del movimiento está en jaque no se permite el movimiento
-        if (isChecked(startPiece.getColor())){
-            setPiece(end, endPiece);
-            setPiece(start, startPiece);
-            return false;
+        MoveVerdict verdict = startPiece.canMove(this, start, end);
+        if (verdict == MoveVerdict.INVALID) {
+            return MoveResult.ILLEGAL;
         }
 
-        return true;
+        if(verdict == MoveVerdict.VALID || verdict == MoveVerdict.PROMOTION) {
+            // Mueve la pieza
+            setPiece(start, null);
+            setPiece(end, startPiece);
+            // Si al final del movimiento está en jaque no se permite el movimiento
+            if (isChecked(startPiece.getColor())){
+                setPiece(end, endPiece);
+                setPiece(start, startPiece);
+                return MoveResult.SELF_MATE;
+            }
+
+            return verdict == MoveVerdict.PROMOTION ? MoveResult.PROMOTION_PENDING : MoveResult.LEGAL;
+        }
+
+        if(verdict == MoveVerdict.CASTLE) {
+            return doCastle(start, end);
+        }
+
+        if(verdict == MoveVerdict.EN_PASSANT) {
+            return doEnPassant(start, end);
+        }
+        
+
+        return MoveResult.ILLEGAL; 
+
+
     }
 
     public boolean isPathClear(Position start, Position end) {
@@ -113,6 +135,12 @@ public class Board {
         return true;
     }
 
+    //Revisa que el anterior movimiento fue el peón en cuestión siendo movido 2 casillas. Necesario para EnPassant
+    //Necesita historial de juego, placeholder por ahora.
+    public boolean wasTwoTilePawnMoved(Pawn pawn) {
+        return true;
+    }
+
     private boolean isValidPosition(Position position) {
         return position.row() >= 0 && position.row() < 8 && position.column() >= 0 && position.column() < 8;
     }
@@ -136,11 +164,61 @@ public class Board {
         // Si alguna pieza enemiga puede moverse hasta el rey, es jaque
         for (Map.Entry<Piece, Position> entry : piecePositions.entrySet()) {
             Piece piece = entry.getKey();
-            if (piece.getColor() != isWhite && piece.canMove(this, entry.getValue(), kingPosition)) {
+            if (piece.getColor() != isWhite && piece.canMove(this, entry.getValue(), kingPosition) == MoveVerdict.VALID) {
                 return true;
             }
         }
         return false;
+    }
+
+
+    private MoveResult doCastle(Position start, Position end) {
+        Piece king = getPiece(start);
+        int row = start.row();
+        // El enroque es corto si el rey se mueve hacia la derecha
+        boolean shortCastle = end.column() > start.column();
+        Position rookFrom = new Position(row, shortCastle ? 7 : 0);
+        // La torre termina del otro lado del rey
+        Position rookTo = new Position(row, shortCastle ? end.column() - 1 : end.column() + 1);
+        Piece rook = getPiece(rookFrom);
+
+        setPiece(start, null);
+        setPiece(end, king);
+        setPiece(rookFrom, null);
+        setPiece(rookTo, rook);
+
+        // Si al final del movimiento está en jaque se revierte
+        if (isChecked(king.getColor())) {
+            setPiece(rookTo, null);
+            setPiece(rookFrom, rook);
+            setPiece(end, null);
+            setPiece(start, king);
+            return MoveResult.SELF_MATE;
+        }
+
+        return MoveResult.LEGAL;
+    }
+
+
+    private MoveResult doEnPassant(Position start, Position end) {
+        Piece pawn = getPiece(start);
+        // El peón capturado está al lado del destino, en la fila de origen
+        Position capturedPosition = new Position(start.row(), end.column());
+        Piece capturedPawn = getPiece(capturedPosition);
+
+        setPiece(start, null);
+        setPiece(capturedPosition, null);
+        setPiece(end, pawn);
+
+        // Si al final del movimiento está en jaque se revierte
+        if (isChecked(pawn.getColor())) {
+            setPiece(end, null);
+            setPiece(capturedPosition, capturedPawn);
+            setPiece(start, pawn);
+            return MoveResult.SELF_MATE;
+        }
+
+        return MoveResult.LEGAL;
     }
 
 
@@ -158,7 +236,7 @@ public class Board {
                 Position to = new Position(kingPosition.row() + rowOffset, kingPosition.column() + columnOffset);
                 // Simula el movimiento para validar si un movimiento lo saca del jaque
                 Piece captured = getPiece(to);
-                if (tryMove(kingPosition, to)) {
+                if (tryMove(kingPosition, to) == MoveResult.LEGAL) {
                     // Revertir la simulacion
                     setPiece(to, captured);
                     setPiece(kingPosition, kingPiece);
@@ -180,7 +258,7 @@ public class Board {
         int checkerCount = 0;
         for (Map.Entry<Piece, Position> entry : piecePositions.entrySet()) {
             Piece piece = entry.getKey();
-            if (piece.getColor() != isWhite && piece.canMove(this, entry.getValue(), kingPosition)) {
+            if (piece.getColor() != isWhite && piece.canMove(this, entry.getValue(), kingPosition) == MoveVerdict.VALID) {
                 checkerPosition = entry.getValue();
                 checkerCount++;
             }
@@ -197,7 +275,7 @@ public class Board {
             if (piece.getColor() != isWhite || piece instanceof King) {
                 continue;
             }
-            if (tryMove(from, checkerPosition)) {
+            if (tryMove(from, checkerPosition) == MoveResult.LEGAL) {
                 // Revertir la simulacion
                 setPiece(checkerPosition, checkerPiece);
                 setPiece(from, piece);
@@ -218,7 +296,7 @@ public class Board {
         int checkerCount = 0;
         for (Map.Entry<Piece, Position> entry : piecePositions.entrySet()) {
             Piece piece = entry.getKey();
-            if (piece.getColor() != isWhite && piece.canMove(this, entry.getValue(), kingPosition)) {
+            if (piece.getColor() != isWhite && piece.canMove(this, entry.getValue(), kingPosition) == MoveVerdict.VALID) {
                 checkerPosition = entry.getValue();
                 checkerCount++;
             }
@@ -245,7 +323,7 @@ public class Board {
                 if (piece.getColor() != isWhite || piece instanceof King) {
                     continue;
                 }
-                if (tryMove(from, between)) {
+                if (tryMove(from, between) == MoveResult.LEGAL) {
                     // Revertir la simulacion
                     setPiece(between, null);
                     setPiece(from, piece);

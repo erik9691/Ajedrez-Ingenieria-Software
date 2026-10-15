@@ -45,6 +45,18 @@ public class ConsoleInputAdapter {
 
             // Si la jugada se rechaza, el core ya lo informó por DisplayPort
             gameInputPort.movePiece(from.row(), from.column(), to.row(), to.column());
+
+            // Si el movimiento dejó una promoción pendiente, se pide la pieza hasta que se acepte
+            while (gameInputPort.isPromotionPending()) {
+                System.out.print("Promocionar a (Q/R/B/N): ");
+                if (!scanner.hasNextLine()) {
+                    return;
+                }
+                String choice = scanner.nextLine();
+                if (!choice.isEmpty()) {
+                    gameInputPort.promotePawn(choice.charAt(0));
+                }
+            }
         }
     }
 
