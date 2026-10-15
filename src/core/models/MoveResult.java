@@ -1,6 +1,6 @@
 package core.models;
 
-// Flags de retorno Board → GameManager (no basta con un booleano)
+// Flags de retorno Board → GameManager (ya no basta con un booleano)
 public enum MoveResult {
     LEGAL,
     ILLEGAL,

@@ -55,7 +55,8 @@ public class GameManager implements GameInputPort{
 
         MoveResult result = board.tryMove(start, end);
         // Intenta el movimiento
-        if (result == MoveResult.ILLEGAL) {
+        // Solo se contemplan movimientos legales y promociones. Otros resultados quedan pendientes.
+        if (result != MoveResult.LEGAL && result != MoveResult.PROMOTION_PENDING) {
             return reject(PlayResult.ILLEGAL_MOVE);
         }
 
@@ -78,6 +79,10 @@ public class GameManager implements GameInputPort{
         } else {
             // Si el juego continúa, muestra el nuevo turno
             displayPort.displayTurn(whiteTurn);
+            // Advertencia si el jugador que sigue está en jaque
+            if (board.isChecked(whiteTurn)) {
+                displayPort.displayMessage("¡Jaque!");
+            }
         }
 
         return true;
@@ -129,6 +134,10 @@ public class GameManager implements GameInputPort{
         } else {
             // Si el juego continúa, muestra el nuevo turno
             displayPort.displayTurn(whiteTurn);
+            // Advertencia si el jugador que sigue está en jaque
+            if (board.isChecked(whiteTurn)) {
+                displayPort.displayMessage("¡Jaque!");
+            }
         }
 
         return true;

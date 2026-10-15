@@ -155,7 +155,7 @@ public class Board {
         return null;
     }
 
-    private boolean isChecked(boolean isWhite) {
+    public boolean isChecked(boolean isWhite) {
         Piece kingPiece = findPiece(King.class, isWhite);
         if (kingPiece == null) {
             return false;
