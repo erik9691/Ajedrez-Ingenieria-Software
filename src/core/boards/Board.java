@@ -75,22 +75,20 @@ public class Board {
                 setPiece(start, startPiece);
                 return MoveResult.SELF_MATE;
             }
-
+            // El return cambia si el movimiento dejo la pieza en promocion
             return verdict == MoveVerdict.PROMOTION ? MoveResult.PROMOTION_PENDING : MoveResult.LEGAL;
         }
-
+        // Enroque
         if(verdict == MoveVerdict.CASTLE) {
             return doCastle(start, end);
         }
-
+        // Al paso
         if(verdict == MoveVerdict.EN_PASSANT) {
             return doEnPassant(start, end);
         }
         
 
         return MoveResult.ILLEGAL; 
-
-
     }
 
     public boolean isPathClear(Position start, Position end) {
