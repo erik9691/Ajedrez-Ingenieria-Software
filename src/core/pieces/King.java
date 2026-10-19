@@ -49,7 +49,7 @@ public class King extends Piece {
         if (hasMoved) {
             return false;
         }
-
+        
         // 2. Ubicar la torre según el lado del enroque
         int direction = end.column() > start.column() ? 1 : -1;
         int rookColumn = direction == 1 ? KINGSIDE_ROOK_COLUMN : QUEENSIDE_ROOK_COLUMN;

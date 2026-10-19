@@ -23,7 +23,6 @@ public class Rook extends Piece {
         }
         // Revisar que no haya nada en el camino
         if (board.isPathClear(start, end)) {
-            this.hasMoved = true; // Marcar la torre como movida si el movimiento es válido
             return MoveVerdict.VALID;
         }
         

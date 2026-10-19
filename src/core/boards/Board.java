@@ -64,7 +64,7 @@ public class Board {
         if (verdict == MoveVerdict.INVALID) {
             return MoveResult.ILLEGAL;
         }
-
+        // Movimiento valido/de promocion
         if(verdict == MoveVerdict.VALID || verdict == MoveVerdict.PROMOTION) {
             // Mueve la pieza
             setPiece(start, null);
@@ -75,6 +75,9 @@ public class Board {
                 setPiece(start, startPiece);
                 return MoveResult.SELF_MATE;
             }
+            // Marca el rey/la torre como movida para validar el enroque
+            if (startPiece instanceof King k) k.markAsMoved();
+            else if (startPiece instanceof Rook r) r.markAsMoved();
             // El return cambia si el movimiento dejo la pieza en promocion
             return verdict == MoveVerdict.PROMOTION ? MoveResult.PROMOTION_PENDING : MoveResult.LEGAL;
         }
@@ -112,7 +115,6 @@ public class Board {
         return true;
     }
 
-    //Lógica provisoria
     public boolean isCheckmated(boolean isWhite) {
         // Si no esta en jaque, no es jaque mate
         if (!isChecked(isWhite)) {
@@ -173,18 +175,29 @@ public class Board {
     private MoveResult doCastle(Position start, Position end) {
         Piece king = getPiece(start);
         int row = start.row();
+
+        // Si esta en jaque no puede hacer enroque
+        boolean color = king.getColor();
+        if (isChecked(color)) return MoveResult.ILLEGAL;
+        // Si la casilla intermedia esta siendo atacada no puede hacer enroque
+        Position passing = new Position(row, (start.column() + end.column()) / 2);
+        setPiece(start, null);
+        setPiece(passing, king);
+        boolean passesThroughCheck = isChecked(color);
+        setPiece(passing, null);
+        setPiece(start, king);
+        if (passesThroughCheck) return MoveResult.ILLEGAL;
         // El enroque es corto si el rey se mueve hacia la derecha
         boolean shortCastle = end.column() > start.column();
         Position rookFrom = new Position(row, shortCastle ? 7 : 0);
         // La torre termina del otro lado del rey
         Position rookTo = new Position(row, shortCastle ? end.column() - 1 : end.column() + 1);
         Piece rook = getPiece(rookFrom);
-
+        // Hace el movimiento
         setPiece(start, null);
         setPiece(end, king);
         setPiece(rookFrom, null);
         setPiece(rookTo, rook);
-
         // Si al final del movimiento está en jaque se revierte
         if (isChecked(king.getColor())) {
             setPiece(rookTo, null);
