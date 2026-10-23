@@ -18,5 +18,7 @@ public interface DisplayPort {
     // Informa que una jugada fue rechazada y por qué. El adaptador decide el texto.
     void displayMoveRejected(PlayResult reason);
 
-    void displayGameOver(boolean isWhiteWinner);
+    void displayPromotionMenu(BoardView board);
+
+    void displayGameOver(Boolean isWhiteWinner);
 }

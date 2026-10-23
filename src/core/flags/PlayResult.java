@@ -12,10 +12,18 @@ public enum PlayResult {
     CHECK,
     CHECKMATE,
     NOT_YOUR_TURN,
-    INVALID_PROMOTION;
+    INVALID_PROMOTION,
+    DRAW,
+    STALEMATE,
+    FORFEIT,
+    NONE;
 
     // true si la jugada fue aceptada, false si fue rechazada.
     public boolean isLegal() {
-        return this == LEGAL || this == PROMOTION_PENDING || this == CHECK || this == CHECKMATE;
+        return this == LEGAL || this == PROMOTION_PENDING || this == CHECK || this == CHECKMATE || this == DRAW || this == STALEMATE;
+    }
+
+    public boolean isFinal() {
+        return this == CHECKMATE || this == STALEMATE || this == FORFEIT || this == DRAW;
     }
 }

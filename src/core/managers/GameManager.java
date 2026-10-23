@@ -2,7 +2,7 @@ package core.managers;
 
 import core.boards.Board;
 import core.flags.PlayResult;
-import core.flags.PromotionNames;
+import core.flags.PromotionId;
 import core.models.Piece;
 import core.models.Position;
 import core.pieces.Bishop;
@@ -11,6 +11,7 @@ import core.pieces.Knight;
 import core.pieces.Pawn;
 import core.pieces.Queen;
 import core.pieces.Rook;
+import core.models.Move;
 import ports.dto.BoardView;
 
 // Reglas y estado de la partida. No conoce el puerto de salida:
@@ -33,7 +34,10 @@ public class GameManager {
         return whiteTurn;
     }
 
-    public PlayResult movePiece(Position start, Position end) {
+    public PlayResult movePiece(Move move) {
+        Position start = move.start();
+        Position end = move.end();
+        
         Piece piece = board.getPiece(start);
         if (piece == null) {
             return PlayResult.NO_PIECE;
@@ -72,7 +76,7 @@ public class GameManager {
     }
 
     // Completa la promoción pendiente y continúa el flujo del turno
-    public PlayResult promotePawn(PromotionNames choice) {
+    public PlayResult promotePawn(PromotionId choice) {
         if (pendingPromotion == null) {
             return PlayResult.INVALID_PROMOTION;
         }

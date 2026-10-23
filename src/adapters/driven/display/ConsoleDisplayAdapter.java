@@ -46,6 +46,10 @@ public class ConsoleDisplayAdapter implements DisplayPort {
             case CHECKMATE -> "¡Fin del juego! Jaque mate.";
             case NOT_YOUR_TURN -> "No es el turno de esa pieza.";
             case INVALID_PROMOTION -> "Elección de promoción inválida. Usá Q, R, B o N.";
+            case DRAW -> "Empate.";
+            case STALEMATE -> "Tablas por ahogado.";
+            case FORFEIT -> "El jugador abandonó la partida.";
+            case NONE -> "";
         });
     }
 
@@ -61,7 +65,16 @@ public class ConsoleDisplayAdapter implements DisplayPort {
     }
 
     @Override
-    public void displayGameOver(boolean isWhiteWinner) {
+    public void displayPromotionMenu(BoardView board) {
+        System.out.println("Promocionar a: Q = Dama, R = Torre, B = Alfil, N = Caballo.");
+    }
+
+    @Override
+    public void displayGameOver(Boolean isWhiteWinner) {
+        if (isWhiteWinner == null) {
+            System.out.println("¡Fin del juego! Empate.");
+            return;
+        }
         System.out.println("¡Fin del juego! Ganan las " + (isWhiteWinner ? "blancas" : "negras") + ".");
     }
 
