@@ -1,11 +1,16 @@
-package adapters;
+package adapters.driven.display;
 
-import ports.BoardView;
-import ports.DisplayPort;
-import ports.PlayResult;
-import ports.PieceView;
+import core.flags.PlayResult;
+import ports.dto.BoardView;
+import ports.out.DisplayPort;
+import ports.dto.PieceView;
 
 public class ConsoleDisplayAdapter implements DisplayPort {
+
+    @Override
+    public void displayGameStart() {
+        System.out.println("¡Comienza la partida!");
+    }
 
     @Override
     public void displayBoard(BoardView board) {
@@ -28,8 +33,20 @@ public class ConsoleDisplayAdapter implements DisplayPort {
     }
 
     @Override
-    public void displayMessage(String message) {
-        System.out.println(message);
+    public void displayMessage(PlayResult flag) {
+        System.out.println(switch (flag) {
+            case LEGAL -> "";
+            case ILLEGAL -> "La pieza no puede moverse a esa casilla.";
+            case NO_PIECE -> "No hay ninguna pieza en la casilla de origen.";
+            case OUT_OF_BOUNDS -> "Posición fuera del tablero.";
+            case OWN_PIECE_CAPTURE -> "No podés capturar tu propia pieza.";
+            case PROMOTION_PENDING -> "Promoción pendiente: elegí la pieza (Q/R/B/N).";
+            case SELF_MATE -> "Ese movimiento te dejaría en jaque.";
+            case CHECK -> "¡Jaque!";
+            case CHECKMATE -> "¡Fin del juego! Jaque mate.";
+            case NOT_YOUR_TURN -> "No es el turno de esa pieza.";
+            case INVALID_PROMOTION -> "Elección de promoción inválida. Usá Q, R, B o N.";
+        });
     }
 
     @Override
@@ -39,16 +56,13 @@ public class ConsoleDisplayAdapter implements DisplayPort {
 
     @Override
     public void displayMoveRejected(PlayResult reason) {
-        String text = switch (reason) {
-            case NO_PIECE -> "No hay ninguna pieza en la casilla de origen.";
-            case NOT_YOUR_TURN -> "No es el turno de esa pieza.";
-            case ILLEGAL_MOVE -> "La pieza no puede moverse a esa casilla.";
-            case INVALID_PROMOTION -> "Elección de promoción inválida. Usá Q, R, B o N.";
-            case OK -> "";
-        };
-        if (!text.isEmpty()) {
-            System.out.println("Error: " + text);
-        }
+        System.out.print("Error: ");
+        displayMessage(reason);
+    }
+
+    @Override
+    public void displayGameOver(boolean isWhiteWinner) {
+        System.out.println("¡Fin del juego! Ganan las " + (isWhiteWinner ? "blancas" : "negras") + ".");
     }
 
     // Mayúscula = blancas, minúscula = negras, '.' = casilla vacía

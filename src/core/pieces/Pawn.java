@@ -1,9 +1,9 @@
 package core.pieces;
 
 import core.boards.Board;
+import core.flags.MoveVerdict;
 import core.models.Piece;
 import core.models.Position;
-import core.models.MoveVerdict;
 
 
 public class Pawn extends Piece {
@@ -31,17 +31,19 @@ public class Pawn extends Piece {
             if (board.getPiece(end) != null) {
                 return MoveVerdict.INVALID;
             }
+            return end.row() == (isWhite ? 0 : 7) ? MoveVerdict.PROMOTION : MoveVerdict.VALID;
         }
         // Si esta en la posicion inicial, se permite el movimiento de 2 hacia delante
-        else if (columnDifference == 0 && start.row() == (isWhite ? 6 : 1) && rowDifference == 2 * direction) {
+        if (columnDifference == 0 && start.row() == (isWhite ? 6 : 1) && rowDifference == 2 * direction) {
             Position middle = new Position(start.row() + direction, start.column());
             // Valida que no haya pieza en ninguna de las 2 posiciones por el que se quiere pasar
             if (board.getPiece(middle) != null || board.getPiece(end) != null) {
                 return MoveVerdict.INVALID;
             }
+            return MoveVerdict.VALID;
         }
         // Para comer en diagonal
-        else if (columnDifference == 1 && rowDifference == direction) {
+        if (columnDifference == 1 && rowDifference == direction) {
             Piece target = board.getPiece(end);
 
             // Verifica si es un movimiento de En Passant o solo es una pieza nula
@@ -57,19 +59,15 @@ public class Pawn extends Piece {
                 return MoveVerdict.INVALID;
             }
 
-            // Si la pieza a no es de otro color
+            // Si la pieza a comer no es de otro color
             if (target.getColor() == isWhite) {
                 return MoveVerdict.INVALID;
             }
-
+            return end.row() == (isWhite ? 0 : 7) ? MoveVerdict.PROMOTION : MoveVerdict.VALID;
         }
 
-        // Peon que llega a la ultima fila: promocion
-        if (end.row() == (isWhite ? 0 : 7)) {
-            return MoveVerdict.PROMOTION;
-        }
-
-        return MoveVerdict.VALID;
+        // Ningun patron de movimiento coincide
+        return MoveVerdict.INVALID;
     }
 
     @Override

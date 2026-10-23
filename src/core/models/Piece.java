@@ -1,6 +1,7 @@
 package core.models;
 
 import core.boards.Board;
+import core.flags.MoveVerdict;
 
 public abstract class Piece {
     protected boolean isWhite;

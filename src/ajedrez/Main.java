@@ -1,11 +1,12 @@
 package ajedrez;
 
-import adapters.ConsoleDisplayAdapter;
-import adapters.ConsoleInputAdapter;
+import adapters.driven.display.ConsoleDisplayAdapter;
+import adapters.driving.input.ConsoleInputAdapter;
+import core.ChessService;
 import core.boards.Board;
 import core.managers.GameManager;
-import ports.DisplayPort;
-import ports.GameInputPort;
+import ports.out.DisplayPort;
+import ports.in.GameInputPort;
 
 // Composition root: el único lugar que conoce todas las piezas y las conecta.
 public class Main {
@@ -14,7 +15,8 @@ public class Main {
         DisplayPort display = new ConsoleDisplayAdapter();
 
         // Core del juego, recibe sus dependencias desde afuera
-        GameInputPort game = new GameManager(new Board(), display);
+        GameManager gameManager = new GameManager(new Board());
+        GameInputPort game = new ChessService(gameManager, display);
 
         // Adaptador de entrada: usa el puerto de entrada del core
         new ConsoleInputAdapter(game).run();
