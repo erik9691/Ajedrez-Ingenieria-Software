@@ -153,6 +153,97 @@ public class Board {
         return true;
     }
 
+    // Ahogado: no esta en jaque pero no tiene ninguna jugada legal
+    public boolean isStalemate(boolean isWhite) {
+        if (isChecked(isWhite)) {
+            return false;
+        }
+        return !hasAnyLegalMove(isWhite);
+    }
+
+    // Material insuficiente: con lo que queda nadie puede dar jaque mate
+    public boolean isInsufficientMaterial() {
+        // Guarda los alfiles y caballos que quedan (los reyes no cuentan)
+        ArrayList<Piece> minorPieces = new ArrayList<>();
+        for (Piece piece : piecePositions.keySet()) {
+            if (piece instanceof King) {
+                continue;
+            }
+            // Con un peon, torre o dama todavia se puede dar mate
+            if (piece instanceof Pawn || piece instanceof Rook || piece instanceof Queen) {
+                return false;
+            }
+            minorPieces.add(piece);
+        }
+        // Rey contra rey, o rey y un alfil/caballo contra rey
+        if (minorPieces.size() <= 1) {
+            return true;
+        }
+        // Rey y alfil contra rey y alfil: empate si los dos alfiles van por casillas del mismo color
+        if (minorPieces.size() == 2) {
+            Piece first = minorPieces.get(0);
+            Piece second = minorPieces.get(1);
+            return first instanceof Bishop && second instanceof Bishop
+                    && first.getColor() != second.getColor()
+                    && isLightSquare(piecePositions.get(first)) == isLightSquare(piecePositions.get(second));
+        }
+        return false;
+    }
+
+    private boolean isLightSquare(Position position) {
+        return (position.row() + position.column()) % 2 == 0;
+    }
+
+    // Prueba todas las jugadas de las piezas propias hasta encontrar una que no deje al rey en jaque
+    private boolean hasAnyLegalMove(boolean isWhite) {
+        // Se copia la lista porque la simulacion modifica piecePositions
+        for (Map.Entry<Piece, Position> entry : new ArrayList<>(piecePositions.entrySet())) {
+            Piece piece = entry.getKey();
+            Position from = entry.getValue();
+            if (piece.getColor() != isWhite) {
+                continue;
+            }
+            for (int row = 0; row < 8; row++) {
+                for (int column = 0; column < 8; column++) {
+                    Position to = new Position(row, column);
+                    Piece target = getPiece(to);
+                    // No puede quedarse en el lugar ni comer una pieza propia
+                    if (to.equals(from) || (target != null && target.getColor() == isWhite)) {
+                        continue;
+                    }
+                    MoveVerdict verdict = piece.canMove(this, from, to);
+                    // Si el enroque es posible, el rey tambien puede moverse una casilla
+                    if (verdict == MoveVerdict.INVALID || verdict == MoveVerdict.CASTLE) {
+                        continue;
+                    }
+                    if (leavesKingSafe(from, to, verdict)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    // Simula la jugada sin usar tryMove (no marca al rey ni a la torre como movidos)
+    private boolean leavesKingSafe(Position from, Position to, MoveVerdict verdict) {
+        Piece piece = getPiece(from);
+        // En el al paso el peon capturado no esta en la casilla destino
+        Position capturedPosition = verdict == MoveVerdict.EN_PASSANT ? new Position(from.row(), to.column()) : to;
+        Piece captured = getPiece(capturedPosition);
+
+        setPiece(from, null);
+        setPiece(capturedPosition, null);
+        setPiece(to, piece);
+        boolean kingSafe = !isChecked(piece.getColor());
+
+        // Revertir la simulacion
+        setPiece(to, null);
+        setPiece(capturedPosition, captured);
+        setPiece(from, piece);
+        return kingSafe;
+    }
+
     //Revisa que el anterior movimiento fue el peón en cuestión siendo movido 2 casillas. Necesario para EnPassant
     //Necesita historial de juego, placeholder por ahora.
     public boolean wasTwoTilePawnMoved(Pawn pawn) {
