@@ -20,6 +20,9 @@ public class GameManager {
     private boolean whiteTurn;
     private final Board board;
     private Position pendingPromotion;
+    // Medias jugadas sin captura ni movimiento de peon (regla de 50 movimientos)
+    private int movesWithoutProgress;
+    private static final int FIFTY_MOVE_LIMIT = 100;
 
     public GameManager(Board board) {
         this.board = board;
@@ -28,6 +31,7 @@ public class GameManager {
     public void startGame() {
         initializeBoard();
         this.whiteTurn = true;
+        this.movesWithoutProgress = 0;
     }
 
     public boolean isWhiteTurn() {
@@ -47,7 +51,13 @@ public class GameManager {
             return PlayResult.NOT_YOUR_TURN;
         }
 
+        boolean isCapture = board.getPiece(end) != null;
         PlayResult result = board.tryMove(start, end);
+
+        // El contador vuelve a 0 con una captura o un movimiento de peon
+        if (result.isLegal()) {
+            movesWithoutProgress = (isCapture || piece instanceof Pawn) ? 0 : movesWithoutProgress + 1;
+        }
 
         // Con promoción pendiente el turno se completa recién en promotePawn
         if (result == PlayResult.PROMOTION_PENDING) {
@@ -65,6 +75,12 @@ public class GameManager {
 
             if (board.isChecked(whiteTurn)) 
                 return PlayResult.CHECK;
+
+            if (board.isStalemate(whiteTurn))
+                return PlayResult.STALEMATE;
+
+            if (isDraw())
+                return PlayResult.DRAW;
         }
 
         return result;
@@ -99,7 +115,18 @@ public class GameManager {
         if (board.isChecked(whiteTurn)) 
             return PlayResult.CHECK;
             
+        if (board.isStalemate(whiteTurn))
+            return PlayResult.STALEMATE;
+
+        if (isDraw())
+            return PlayResult.DRAW;
+
         return PlayResult.LEGAL;
+    }
+
+    // Empate por material insuficiente o por la regla de 50 movimientos
+    private boolean isDraw() {
+        return board.isInsufficientMaterial() || movesWithoutProgress >= FIFTY_MOVE_LIMIT;
     }
 
     public boolean isGameOver() {
