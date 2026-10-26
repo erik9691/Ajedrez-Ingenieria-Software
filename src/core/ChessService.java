@@ -1,4 +1,4 @@
-package core.services;
+package core;
 
 import core.flags.PlayResult;
 import core.flags.PromotionId;
@@ -14,14 +14,16 @@ import ports.out.PlayerInputPort;
 //Todo el juego pasa por este service, y este service llama a peticiones de los Input, no al revés
 
 public class ChessService implements ChessMatchPort {
-    protected final GameManager gameManager;
+    protected final GameManager game;
     protected final DisplayPort display;
-    protected final PlayerInputPort playerInput;
+    protected final PlayerInputPort whiteInput;
+    protected final PlayerInputPort blackInput;
 
-    public ChessService(GameManager gameManager, DisplayPort displayPort, PlayerInputPort playerInputPort) {
-        this.gameManager = gameManager;
+    public ChessService(GameManager gameManager, DisplayPort displayPort, PlayerInputPort whitePlayerInputPort, PlayerInputPort blackPlayerInputPort) {
+        this.game = gameManager;
         this.display = displayPort;
-        this.playerInput = playerInputPort;
+        this.whiteInput = whitePlayerInputPort;
+        this.blackInput = blackPlayerInputPort;
     }
 
     @Override 
@@ -30,7 +32,11 @@ public class ChessService implements ChessMatchPort {
         PlayResult result = PlayResult.NONE;
 
         while(!result.isFinal()){
-            result = playTurn();
+            if(game.isWhiteTurn())
+                result = playTurn(whiteInput);
+            else
+                result = playTurn(blackInput);
+
         }
 
         Boolean winner = decideWinner(result);
@@ -40,46 +46,46 @@ public class ChessService implements ChessMatchPort {
 
 
     protected void initializeGame() {
-        gameManager.startGame();
+        game.startGame();
         display.displayGameStart();
-        display.displayBoard(gameManager.getBoardView());
-        display.displayTurn(gameManager.isWhiteTurn());
+        display.displayBoard(game.getBoardView());
+        display.displayTurn(game.isWhiteTurn());
     }
 
 
-    protected PlayResult playTurn(){
+    protected PlayResult playTurn(PlayerInputPort playerInput){
         PlayResult currentResult = PlayResult.NONE;
 
-        Move playerMove = playerInput.requestMove();
+        Move playerMove = playerInput.requestMove(game.getBoardView());
         if (playerMove == null) {
             display.displayMessage(PlayResult.FORFEIT);
             return PlayResult.FORFEIT;
         }
 
-        currentResult = gameManager.movePiece(playerMove);
+        currentResult = game.movePiece(playerMove);
 
         if (!currentResult.isLegal()) {
             display.displayMoveRejected(currentResult);
             return currentResult;
         }
 
-        display.displayBoard(gameManager.getBoardView());
-        display.displayMessage(currentResult);
+        display.displayBoard(game.getBoardView());
 
         while(currentResult == PlayResult.PROMOTION_PENDING ){
-            display.displayPromotionMenu(gameManager.getBoardView());
-            PromotionId promotedPiece = playerInput.requestPromotion();
-            PlayResult promotedResult = gameManager.promotePawn(promotedPiece);
+            display.displayPromotionMenu(game.getBoardView());
+            PromotionId promotedPiece = playerInput.requestPromotion(game.getBoardView());
+            PlayResult promotedResult = game.promotePawn(promotedPiece);
 
             if (!promotedResult.isLegal()) {
                 display.displayMoveRejected(promotedResult);
                 continue;
             }
 
-            display.displayBoard(gameManager.getBoardView());
-            display.displayMessage(promotedResult);
+            display.displayBoard(game.getBoardView());
             currentResult = promotedResult;
         }
+
+        display.displayMessage(currentResult);
 
         return currentResult;
     }
@@ -87,7 +93,7 @@ public class ChessService implements ChessMatchPort {
 
     protected Boolean decideWinner(PlayResult lastResult) {
         if(lastResult == PlayResult.CHECKMATE || lastResult == PlayResult.FORFEIT)
-            return !gameManager.isWhiteTurn();
+            return !game.isWhiteTurn();
 
         return null;
     }

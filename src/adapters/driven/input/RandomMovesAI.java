@@ -1,4 +1,4 @@
-package adapters.driven.ai;
+package adapters.driven.input;
 
 import java.util.Random;
 
@@ -7,16 +7,16 @@ import core.models.Move;
 import core.models.Position;
 import ports.dto.BoardView;
 import ports.dto.PieceView;
-import ports.out.OpponentInputPort;
+import ports.out.PlayerInputPort;
 
 //IA que elige movimientos random
 //Provisional
 
-public class RandomMovesAI implements OpponentInputPort {
+public class RandomMovesAI implements PlayerInputPort {
     private final Random random = new Random();
 
     @Override
-    public Move chooseMove(BoardView board) {
+    public Move requestMove(BoardView board) {
         // Tira casillas al azar hasta obtener una jugada plausible; la validez
         // final la decide el GameManager, que la rechaza y el servicio vuelve a pedir.
         while (true) {
@@ -40,7 +40,7 @@ public class RandomMovesAI implements OpponentInputPort {
     }
 
     @Override
-    public PromotionId choosePromotion(BoardView board) {
+    public PromotionId requestPromotion(BoardView board) {
         PromotionId[] options = PromotionId.values();
         return options[random.nextInt(options.length)];
     }

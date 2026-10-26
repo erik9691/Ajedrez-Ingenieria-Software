@@ -6,12 +6,13 @@ import core.flags.PromotionId;
 import core.models.Move;
 import core.models.Position;
 import ports.out.PlayerInputPort;
+import ports.dto.BoardView;
 
 public class ConsoleInputAdapter implements PlayerInputPort {
     private final Scanner scanner = new Scanner(System.in);
 
     @Override
-    public Move requestMove() {
+    public Move requestMove(BoardView board) {
         while (true) {
             System.out.print("Origen: ");
             if (!scanner.hasNextLine()) {
@@ -35,7 +36,7 @@ public class ConsoleInputAdapter implements PlayerInputPort {
     }
 
     @Override
-    public PromotionId requestPromotion() {
+    public PromotionId requestPromotion(BoardView board) {
         while (true) {
             System.out.print("Elección: ");
             if (!scanner.hasNextLine()) {
