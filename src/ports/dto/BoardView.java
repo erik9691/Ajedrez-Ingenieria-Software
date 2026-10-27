@@ -1,4 +1,4 @@
-package ports;
+package ports.dto;
 
 // Vista de solo lectura del tablero. Es lo único que el dominio le entrega a los adaptadores de salida.
 // La fila 0 es la parte superior del tablero (donde están las negras).

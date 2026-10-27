@@ -1,4 +1,4 @@
-package core.models;
+package core.flags;
 
 // Flags de retorno Piece → Board (ya no basta con un booleano)
 public enum MoveVerdict {

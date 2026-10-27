@@ -1,9 +1,9 @@
 package core.pieces;
 
-import core.boards.Board;
-import core.models.Piece;
+import core.flags.MoveVerdict;
 import core.models.Position;
-import core.models.MoveVerdict;
+import core.rules.Board;
+import core.rules.Piece;
 
 public class Bishop extends Piece {
 
