@@ -5,8 +5,9 @@ import adapters.driven.input.StockfishElevenAI;
 import adapters.driving.menu.ConsoleMenuAdapter;
 import adapters.driving.menu.GameOption;
 import core.ChessService;
-import core.boards.Board;
 import core.managers.GameManager;
+import core.rules.Board;
+import core.rules.GameOverChecker;
 import ports.in.ChessMatchPort;
 import ports.out.DisplayPort;
 import ports.out.PlayerInputPort;
@@ -20,7 +21,9 @@ public class Main {
         GameOption option = menu.chooseOption();
 
         DisplayPort display = new ConsoleDisplayAdapter();
-        GameManager gameManager = new GameManager(new Board());
+        Board board = new Board();
+        GameOverChecker gameOverChecker = new GameOverChecker(board);
+        GameManager gameManager = new GameManager(board, gameOverChecker);
 
         PlayerInputPort whiteInput;
         PlayerInputPort blackInput;

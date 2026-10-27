@@ -1,9 +1,7 @@
 package core.managers;
 
-import core.boards.Board;
 import core.flags.PlayResult;
 import core.flags.PromotionId;
-import core.models.Piece;
 import core.models.Position;
 import core.pieces.Bishop;
 import core.pieces.King;
@@ -11,6 +9,9 @@ import core.pieces.Knight;
 import core.pieces.Pawn;
 import core.pieces.Queen;
 import core.pieces.Rook;
+import core.rules.Board;
+import core.rules.GameOverChecker;
+import core.rules.Piece;
 import core.models.Move;
 import ports.dto.BoardView;
 
@@ -19,19 +20,17 @@ import ports.dto.BoardView;
 public class GameManager {
     private boolean whiteTurn;
     private final Board board;
+    private final GameOverChecker gameOverRules;
     private Position pendingPromotion;
-    // Medias jugadas sin captura ni movimiento de peon (regla de 50 movimientos)
-    private int movesWithoutProgress;
-    private static final int FIFTY_MOVE_LIMIT = 100;
 
-    public GameManager(Board board) {
+    public GameManager(Board board, GameOverChecker gameOverChecker) {
         this.board = board;
+        this.gameOverRules = gameOverChecker;
     }
 
     public void startGame() {
         initializeBoard();
         this.whiteTurn = true;
-        this.movesWithoutProgress = 0;
     }
 
     public boolean isWhiteTurn() {
@@ -54,11 +53,6 @@ public class GameManager {
         boolean isCapture = board.getPiece(end) != null;
         PlayResult result = board.tryMove(start, end);
 
-        // El contador vuelve a 0 con una captura o un movimiento de peon
-        if (result.isLegal()) {
-            movesWithoutProgress = (isCapture || piece instanceof Pawn) ? 0 : movesWithoutProgress + 1;
-        }
-
         // Con promoción pendiente el turno se completa recién en promotePawn
         if (result == PlayResult.PROMOTION_PENDING) {
             pendingPromotion = end;
@@ -68,19 +62,25 @@ public class GameManager {
         // Cambia el turno y chequea jaques solo si la jugada fue aceptada
         if (result.isLegal()) {
             whiteTurn = !whiteTurn;
+            // El contador de movimientos sin progreso vuelve a 0 con una captura o un movimiento de peon
+            if((isCapture || piece instanceof Pawn))
+                gameOverRules.resetHalfmoveClock();
+            else
+                gameOverRules.incrementHalfmoveClock();
 
-            if(board.isCheckmated(whiteTurn)) 
-                return PlayResult.CHECKMATE;
-             
 
             if (board.isChecked(whiteTurn)) 
                 return PlayResult.CHECK;
 
-            if (board.isStalemate(whiteTurn))
+            if (gameOverRules.isCheckMate(whiteTurn)) 
+                return PlayResult.CHECKMATE;
+
+            if (gameOverRules.isDraw())
+                return PlayResult.DRAW;
+             
+            if (gameOverRules.isStalemate(whiteTurn))
                 return PlayResult.STALEMATE;
 
-            if (isDraw())
-                return PlayResult.DRAW;
         }
 
         return result;
@@ -109,28 +109,22 @@ public class GameManager {
         // Cambia el turno
         whiteTurn = !whiteTurn;
 
-        if(board.isCheckmated(whiteTurn)) 
-            return PlayResult.CHECKMATE;
-        
+        //Promoción siempre reinicia el contador
+        gameOverRules.resetHalfmoveClock();
+
         if (board.isChecked(whiteTurn)) 
             return PlayResult.CHECK;
+
+        if (gameOverRules.isCheckMate(whiteTurn)) 
+            return PlayResult.CHECKMATE;
+
+        if (gameOverRules.isDraw())
+            return PlayResult.DRAW;
             
-        if (board.isStalemate(whiteTurn))
+        if (gameOverRules.isStalemate(whiteTurn))
             return PlayResult.STALEMATE;
 
-        if (isDraw())
-            return PlayResult.DRAW;
-
         return PlayResult.LEGAL;
-    }
-
-    // Empate por material insuficiente o por la regla de 50 movimientos
-    private boolean isDraw() {
-        return board.isInsufficientMaterial() || movesWithoutProgress >= FIFTY_MOVE_LIMIT;
-    }
-
-    public boolean isGameOver() {
-        return board.isCheckmated(whiteTurn);
     }
 
     // true si el jugador al que le toca mover está en jaque

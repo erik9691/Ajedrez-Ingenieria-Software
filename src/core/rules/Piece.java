@@ -1,7 +1,7 @@
-package core.models;
+package core.rules;
 
-import core.boards.Board;
 import core.flags.MoveVerdict;
+import core.models.Position;
 
 public abstract class Piece {
     protected boolean isWhite;

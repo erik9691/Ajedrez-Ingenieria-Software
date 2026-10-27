@@ -1,9 +1,9 @@
 package core.pieces;
 
-import core.boards.Board;
 import core.flags.MoveVerdict;
-import core.models.Piece;
 import core.models.Position;
+import core.rules.Board;
+import core.rules.Piece;
 
 
 public class Rook extends Piece {
