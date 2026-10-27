@@ -15,6 +15,7 @@ public class Bishop extends Piece {
     public MoveVerdict canMove(Board board, Position start, Position end) {
         int rowDifference = Math.abs(end.row() - start.row());
         int columnDifference = Math.abs(end.column() - start.column());
+        
         // Tiene que moverse en diagonal
         if (rowDifference != columnDifference) {
             return MoveVerdict.INVALID;

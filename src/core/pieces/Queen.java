@@ -20,6 +20,7 @@ public class Queen extends Piece {
         boolean straight = start.row() == end.row() || start.column() == end.column();
 
         boolean diagonal = rowDifference == columnDifference;
+        
         // Combina logica de Rook y Bishop
         if (!straight && !diagonal) {
             return MoveVerdict.INVALID;

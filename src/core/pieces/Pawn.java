@@ -16,11 +16,13 @@ public class Pawn extends Piece {
     public MoveVerdict canMove(Board board, Position start, Position end) {
 
         int direction;
+
         if (isWhite) {
             direction = -1;
         } else {
             direction = 1;
         }
+
         // rowDifference no se vuelve absoluto para saber la direccion de movimiento
         // Esto asume que los negros vienen antes en la matriz
         int rowDifference = end.row() - start.row();
@@ -32,6 +34,7 @@ public class Pawn extends Piece {
                 return MoveVerdict.INVALID;
             }
         }
+
         // Si esta en la posicion inicial, se permite el movimiento de 2 hacia delante
         else if (columnDifference == 0 && start.row() == (isWhite ? 6 : 1) && rowDifference == 2 * direction) {
             Position middle = new Position(start.row() + direction, start.column());
@@ -49,6 +52,7 @@ public class Pawn extends Piece {
                 Position adjacentPawnPosition = new Position(start.row(), end.column());
                 Piece adjacentPawn = board.getPiece(adjacentPawnPosition);
                 if (adjacentPawn instanceof Pawn && adjacentPawn.getColor() != isWhite) {
+                    
                     // Verifica si el peon adyacente se movio 2 casillas en el ultimo turno
                     if (board.wasTwoTilePawnMoved((Pawn) adjacentPawn)) {
                         return MoveVerdict.EN_PASSANT;
