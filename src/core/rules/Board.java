@@ -37,6 +37,7 @@ public class Board {
         if (!isValidPosition(position)) {
             return null;
         }        
+         //retorna la pieza que esta en esa coordenada (fila, columna de Position)
         return squares[position.row()][position.column()];
     }
 
@@ -150,6 +151,7 @@ public class Board {
             return false;
 
         Position kingPosition = piecePositions.get(kingPiece);
+        
         // Si alguna pieza enemiga puede moverse hasta el rey, es jaque
         for (Map.Entry<Piece, Position> entry : piecePositions.entrySet()) {
             Piece piece = entry.getKey();
@@ -203,6 +205,7 @@ public class Board {
         // Si esta en jaque no puede hacer enroque
         boolean color = king.getColor();
         if (isChecked(color)) return PlayResult.ILLEGAL;
+        
         // Si la casilla intermedia esta siendo atacada no puede hacer enroque
         Position passing = new Position(row, (start.column() + end.column()) / 2);
         setPiece(start, null);
@@ -211,17 +214,21 @@ public class Board {
         setPiece(passing, null);
         setPiece(start, king);
         if (passesThroughCheck) return PlayResult.ILLEGAL;
+
         // El enroque es corto si el rey se mueve hacia la derecha
         boolean shortCastle = end.column() > start.column();
         Position rookFrom = new Position(row, shortCastle ? 7 : 0);
+
         // La torre termina del otro lado del rey
         Position rookTo = new Position(row, shortCastle ? end.column() - 1 : end.column() + 1);
         Piece rook = getPiece(rookFrom);
+
         // Hace el movimiento
         setPiece(start, null);
         setPiece(end, king);
         setPiece(rookFrom, null);
         setPiece(rookTo, rook);
+
         // Si al final del movimiento está en jaque se revierte
         if (isChecked(king.getColor())) {
             setPiece(rookTo, null);

@@ -55,7 +55,7 @@ public class GameManager {
 
         // Con promoción pendiente el turno se completa recién en promotePawn
         if (result == PlayResult.PROMOTION_PENDING) {
-            pendingPromotion = end;
+            pendingPromotion = end; //
             return result;
         }
 
