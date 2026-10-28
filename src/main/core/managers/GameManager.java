@@ -77,7 +77,8 @@ public class GameManager {
                 return result;
             }
 
-            whiteTurn = !whiteTurn;
+            whiteTurn = !whiteTurn; //cambia el turno
+            
             // El contador de movimientos sin progreso vuelve a 0 con una captura o un movimiento de peon
             if((captured != null || piece instanceof Pawn))
                 endRules.resetHalfmoveClock();
@@ -112,17 +113,21 @@ public class GameManager {
         if (pendingPromotion == null) {
             return PlayResult.INVALID_PROMOTION;
         }
+
         Piece pawn = board.getPiece(pendingPromotion);
+        
+        //Crea la pieza elegida por el jugador
         Piece promoted = switch (choice) {
             case QUEEN -> new Queen(pawn.getColor());
             case ROOK -> new Rook(pawn.getColor());
             case BISHOP -> new Bishop(pawn.getColor());
             case KNIGHT -> new Knight(pawn.getColor());
         };
+
         board.setPiece(pendingPromotion, promoted);
         pendingPromotion = null;
 
-        // Cambia el turno
+        // Cambia el turno porque la promotion ya quedo terminada
         whiteTurn = !whiteTurn;
 
         //Promoción siempre reinicia el contador
