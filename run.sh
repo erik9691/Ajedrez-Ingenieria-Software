@@ -8,5 +8,5 @@ case "$(uname -s)" in
     *)                      OS=unknown ;;
 esac
 
-javac -d out $(find src -name "*.java")
+javac -d out $(find src/main -name "*.java")
 java -cp out Main --os "$OS" "$@"
