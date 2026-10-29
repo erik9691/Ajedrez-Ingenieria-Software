@@ -34,6 +34,7 @@ public class GameOverChecker {
     }
 
     public boolean isCheckMate(boolean isWhite) {
+
         // Si no esta en jaque, no es jaque mate
         if (!board.isChecked(isWhite)) {
             return false;
@@ -74,24 +75,20 @@ public class GameOverChecker {
     }
 
 
-
-
-
-
-
-
-
-
     private boolean tryKingMoves(boolean isWhite) {
         Piece kingPiece = board.getKing(isWhite);
+
         if (kingPiece == null)
             return false;
 
         Position kingPosition = board.getPiecePositions().get(kingPiece);
+
         // Prueba las 8 casillas adyacentes al rey
         for (int rowOffset = -1; rowOffset <= 1; rowOffset++) {
             for (int columnOffset = -1; columnOffset <= 1; columnOffset++) {
+
                 Position to = new Position(kingPosition.row() + rowOffset, kingPosition.column() + columnOffset);
+
                 // Simula el movimiento para validar si un movimiento lo saca del jaque
                 Piece captured = board.getPiece(to);
                 if (board.tryMove(kingPosition, to) == PlayResult.LEGAL) {
@@ -107,15 +104,19 @@ public class GameOverChecker {
 
     private boolean tryCaptureChecker(boolean isWhite) {
         Piece kingPiece = board.getKing(isWhite);
+
         if (kingPiece == null)
             return false;
 
         Position kingPosition = board.getPiecePositions().get(kingPiece);
+
         // Busca las piezas enemigas que estan dando jaque
         Position checkerPosition = null;
         int checkerCount = 0;
+
         for (Map.Entry<Piece, Position> entry : board.getPiecePositions().entrySet()) {
             Piece piece = entry.getKey();
+
             if (piece.getColor() != isWhite && piece.canMove(board, entry.getValue(), kingPosition) == MoveVerdict.VALID) {
                 checkerPosition = entry.getValue();
                 checkerCount++;
@@ -125,14 +126,18 @@ public class GameOverChecker {
         if (checkerCount != 1) {
             return false;
         }
+
         Piece checkerPiece = board.getPiece(checkerPosition);
+
         // Prueba si alguna pieza propia puede capturar a la que da jaque
         for (Map.Entry<Piece, Position> entry : new ArrayList<>(board.getPiecePositions().entrySet())) {
             Piece piece = entry.getKey();
             Position from = entry.getValue();
+
             if (piece.getColor() != isWhite || piece instanceof King) {
                 continue;
             }
+
             if (board.tryMove(from, checkerPosition) == PlayResult.LEGAL) {
                 // Revertir la simulacion
                 board.setPiece(checkerPosition, checkerPiece);
@@ -149,38 +154,50 @@ public class GameOverChecker {
             return false;
 
         Position kingPosition = board.getPiecePositions().get(kingPiece);
+
         // Busca las piezas enemigas que estan dando jaque
         Position checkerPosition = null;
-        int checkerCount = 0;
+        int checkerCount = 0; 
+
         for (Map.Entry<Piece, Position> entry : board.getPiecePositions().entrySet()) {
             Piece piece = entry.getKey();
+            
+            //compruebna que sea del color contrario y que puede atacar al rey
             if (piece.getColor() != isWhite && piece.canMove(board, entry.getValue(), kingPosition) == MoveVerdict.VALID) {
                 checkerPosition = entry.getValue();
                 checkerCount++;
             }
         }
-        // Solo se puede bloquear un unico jaque de una pieza deslizante
+
+        // Si no hay exactamente una pieza atacante, devuelve false.
         if (checkerCount != 1) {
             return false;
         }
+
         Piece checkerPiece = board.getPiece(checkerPosition);
         if (!(checkerPiece instanceof Rook || checkerPiece instanceof Bishop || checkerPiece instanceof Queen)) {
             return false;
         }
+
         // Calcula las casillas entre la checker y el rey
         int rowDirection = Integer.compare(kingPosition.row(), checkerPosition.row());
         int columnDirection = Integer.compare(kingPosition.column(), checkerPosition.column());
         int row = checkerPosition.row() + rowDirection;
         int column = checkerPosition.column() + columnDirection;
+
+        //recorre las casillas hasta llegar a la del rey
         while (row != kingPosition.row() || column != kingPosition.column()) {
             Position between = new Position(row, column);
+
             // Prueba si alguna pieza propia puede interponerse
             for (Map.Entry<Piece, Position> entry : new ArrayList<>(board.getPiecePositions().entrySet())) {
                 Piece piece = entry.getKey();
                 Position from = entry.getValue();
+
                 if (piece.getColor() != isWhite || piece instanceof King) {
                     continue;
                 }
+
                 if (board.tryMove(from, between) == PlayResult.LEGAL) {
                     // Revertir la simulacion
                     board.setPiece(between, null);
@@ -188,6 +205,8 @@ public class GameOverChecker {
                     return true;
                 }
             }
+
+            //se avanza una casilla mas en la direccion del atacante al rey, para cambiar la posicion intermedia
             row += rowDirection;
             column += columnDirection;
         }
@@ -198,26 +217,33 @@ public class GameOverChecker {
 
     // Material insuficiente: con lo que queda nadie puede dar jaque mate
     public boolean isInsufficientMaterial() {
+
         // Guarda los alfiles y caballos que quedan (los reyes no cuentan)
         ArrayList<Piece> minorPieces = new ArrayList<>();
         for (Piece piece : board.getPiecePositions().keySet()) {
+
             if (piece instanceof King) {
                 continue;
             }
+
             // Con un peon, torre o dama todavia se puede dar mate
             if (piece instanceof Pawn || piece instanceof Rook || piece instanceof Queen) {
                 return false;
             }
+
             minorPieces.add(piece);
         }
+
         // Rey contra rey, o rey y un alfil/caballo contra rey
         if (minorPieces.size() <= 1) {
             return true;
         }
+
         // Rey y alfil contra rey y alfil: empate si los dos alfiles van por casillas del mismo color
         if (minorPieces.size() == 2) {
             Piece first = minorPieces.get(0);
             Piece second = minorPieces.get(1);
+
             return first instanceof Bishop && second instanceof Bishop
                     && first.getColor() != second.getColor()
                     && isLightSquare(board.getPiecePositions().get(first)) == isLightSquare(board.getPiecePositions().get(second));
@@ -231,26 +257,35 @@ public class GameOverChecker {
 
     // Prueba todas las jugadas de las piezas propias hasta encontrar una que no deje al rey en jaque
     private boolean hasAnyLegalMove(boolean isWhite) {
+
         // Se copia la lista porque la simulacion modifica piecePositions
+
         for (Map.Entry<Piece, Position> entry : new ArrayList<>(board.getPiecePositions().entrySet())) {
             Piece piece = entry.getKey();
             Position from = entry.getValue();
             if (piece.getColor() != isWhite) {
                 continue;
             }
+
+            //se recorren las 64 casillas del tablero
             for (int row = 0; row < 8; row++) {
                 for (int column = 0; column < 8; column++) {
+
                     Position to = new Position(row, column);
                     Piece target = board.getPiece(to);
+
                     // No puede quedarse en el lugar ni comer una pieza propia
                     if (to.equals(from) || (target != null && target.getColor() == isWhite)) {
                         continue;
                     }
+
                     MoveVerdict verdict = piece.canMove(board, from, to);
+
                     // Si el enroque es posible, el rey tambien puede moverse una casilla
                     if (verdict == MoveVerdict.INVALID || verdict == MoveVerdict.CASTLE) {
                         continue;
                     }
+
                     if (leavesKingSafe(from, to, verdict)) {
                         return true;
                     }
@@ -262,7 +297,9 @@ public class GameOverChecker {
 
     // Simula la jugada sin usar tryMove (no marca al rey ni a la torre como movidos)
     private boolean leavesKingSafe(Position from, Position to, MoveVerdict verdict) {
+
         Piece piece = board.getPiece(from);
+
         // En el al paso el peon capturado no esta en la casilla destino
         Position capturedPosition = verdict == MoveVerdict.EN_PASSANT ? new Position(from.row(), to.column()) : to;
         Piece captured = board.getPiece(capturedPosition);
@@ -290,6 +327,7 @@ public class GameOverChecker {
     // se movio en esas k jugadas volvio a la casilla donde estaba.
     private boolean hadThreeMoveRepetition() {
         List<MoveRecord> recentMoves = history.getNMoves(movesWithoutProgress);
+        
         // Ir y volver con una pieza de cada bando toma 4 medias jugadas;
         // para llegar a tres repeticiones se necesitan al menos 8.
         if (recentMoves.size() < 8) {
