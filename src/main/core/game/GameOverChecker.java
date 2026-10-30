@@ -80,6 +80,7 @@ public class GameOverChecker {
         if (kingPosition == null) {
             return false;
         }
+        Piece kingPiece = board.getPiece(kingPosition);
 
         // Prueba las 8 casillas adyacentes al rey
         for (int rowOffset = -1; rowOffset <= 1; rowOffset++) {

@@ -4,7 +4,6 @@ import main.core.flags.PlayResult;
 import main.core.flags.PromotionId;
 import main.core.managers.GameManager;
 import main.core.models.Move;
-import main.ports.in.ChessMatchPort;
 import main.ports.out.DisplayPort;
 import main.ports.out.PlayerInputPort;
 
@@ -13,7 +12,7 @@ import main.ports.out.PlayerInputPort;
 //Eso está mal, ya que un adaptador de inputs se encarga de mantener corriendo el juego
 //Todo el juego pasa por este service, y este service llama a peticiones de los Input, no al revés
 
-public class ChessService implements ChessMatchPort {
+public class ChessService {
     protected final GameManager game;
     protected final DisplayPort display;
     protected final PlayerInputPort whiteInput;
@@ -26,7 +25,6 @@ public class ChessService implements ChessMatchPort {
         this.blackInput = blackPlayerInputPort;
     }
 
-    @Override 
     public Boolean runGame(){
         initializeGame();
         PlayResult result = PlayResult.NONE;

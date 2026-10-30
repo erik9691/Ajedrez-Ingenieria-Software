@@ -176,12 +176,6 @@ public class Board {
         return null;
     }
 
-
-
-    public Piece[][] getSquares(){
-        return squares;
-    }
-
     public Map<Piece, Position> getPiecePositions(){
         return piecePositions;
     }
@@ -189,9 +183,6 @@ public class Board {
     private boolean isValidPosition(Position position) {
         return position.row() >= 0 && position.row() < 8 && position.column() >= 0 && position.column() < 8;
     }
-
-
-
 
     private PlayResult doCastle(Position start, Position end) {
         Piece king = getPiece(start);

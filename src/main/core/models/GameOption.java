@@ -1,4 +1,4 @@
-package main.adapters.driving.menu;
+package main.core.models;
 
 public enum GameOption {
     LOCAL,
