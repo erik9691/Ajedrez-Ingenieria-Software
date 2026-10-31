@@ -16,6 +16,7 @@ import main.ports.out.DisplayPort;
 import main.ports.out.PlayerInputPort;
 
 // Composition root: el único lugar que conoce todas las piezas y las conecta.
+
 public class Main {
     public static void main(String[] args) {
         String enginePath = enginePath(osFromArgs(args));

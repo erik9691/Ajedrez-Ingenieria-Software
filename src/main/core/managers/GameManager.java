@@ -37,7 +37,8 @@ public class GameManager {
     public void startGame() {
         initializeBoard();
         this.whiteTurn = true;
-        // Partida nueva: historial y contadores de la anterior no deben quedar
+
+        // Partida nueva: historial y contadores de la anterior se reinicia
         history.clear();
         this.moveCount = 0;
         endRules.resetHalfmoveClock();
@@ -53,6 +54,7 @@ public class GameManager {
         
         Piece piece = board.getPiece(start);
         Piece captured = board.getPiece(end);
+
         if (piece == null) {
             return PlayResult.NO_PIECE;
         }
@@ -110,6 +112,7 @@ public class GameManager {
 
     // Completa la promoción pendiente y continúa el flujo del turno
     public PlayResult promotePawn(PromotionId choice) {
+
         if (pendingPromotion == null) {
             return PlayResult.INVALID_PROMOTION;
         }
@@ -132,7 +135,8 @@ public class GameManager {
 
         //Promoción siempre reinicia el contador
         endRules.resetHalfmoveClock();
-
+        
+        //continua el flujo del turno post promotion
         if (board.isChecked(whiteTurn)) 
             return PlayResult.CHECK;
 

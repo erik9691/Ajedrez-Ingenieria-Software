@@ -9,7 +9,7 @@ import main.ports.out.PlayerInputPort;
 import main.ports.dto.BoardView;
 
 public class ConsoleInputAdapter implements PlayerInputPort {
-    private final Scanner scanner = new Scanner(System.in);
+    private final Scanner scanner = new Scanner(System.in); 
 
     @Override
     public Move requestMove(BoardView board) {

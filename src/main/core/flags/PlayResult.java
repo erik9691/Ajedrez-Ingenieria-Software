@@ -23,6 +23,8 @@ public enum PlayResult {
         return this == LEGAL || this == PROMOTION_PENDING || this == CHECK || this == CHECKMATE || this == DRAW || this == STALEMATE;
     }
 
+    
+    //resultados que terminan la partida: jaquemate, rey ahogado, abandono/rendicion, empate general.
     public boolean isFinal() {
         return this == CHECKMATE || this == STALEMATE || this == FORFEIT || this == DRAW;
     }
