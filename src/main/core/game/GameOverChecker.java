@@ -76,12 +76,11 @@ public class GameOverChecker {
 
 
     private boolean tryKingMoves(boolean isWhite) {
-        Piece kingPiece = board.getKing(isWhite);
-
-        if (kingPiece == null)
+        Position kingPosition = board.findPiecePosition(King.class, isWhite);
+        if (kingPosition == null) {
             return false;
-
-        Position kingPosition = board.getPiecePositions().get(kingPiece);
+        }
+        Piece kingPiece = board.getPiece(kingPosition);
 
         // Prueba las 8 casillas adyacentes al rey
         for (int rowOffset = -1; rowOffset <= 1; rowOffset++) {
@@ -103,12 +102,10 @@ public class GameOverChecker {
     }
 
     private boolean tryCaptureChecker(boolean isWhite) {
-        Piece kingPiece = board.getKing(isWhite);
-
-        if (kingPiece == null)
+        Position kingPosition = board.findPiecePosition(King.class, isWhite);
+        if (kingPosition == null) {
             return false;
-
-        Position kingPosition = board.getPiecePositions().get(kingPiece);
+        }
 
         // Busca las piezas enemigas que estan dando jaque
         Position checkerPosition = null;
@@ -149,11 +146,10 @@ public class GameOverChecker {
     }
 
     private boolean tryBlockMoves(boolean isWhite) {
-        Piece kingPiece = board.getKing(isWhite);
-        if (kingPiece == null)
+        Position kingPosition = board.findPiecePosition(King.class, isWhite);
+        if (kingPosition == null) {
             return false;
-
-        Position kingPosition = board.getPiecePositions().get(kingPiece);
+        }
 
         // Busca las piezas enemigas que estan dando jaque
         Position checkerPosition = null;

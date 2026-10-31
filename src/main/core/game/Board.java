@@ -21,16 +21,12 @@ public class Board {
     protected Piece[][] squares;
     private final Map<Piece, Position> piecePositions;
     private final MoveHistory history;
-    private King whiteKing;
-    private King blackKing;
 
 
 
     public Board(MoveHistory moveHistory) {
         this.squares = new Piece[8][8];
         this.piecePositions = new HashMap<>();
-        this.whiteKing = null;
-        this.blackKing = null;
         this.history = moveHistory;
     }
 
@@ -51,12 +47,6 @@ public class Board {
         }
         if (piece != null) {
             piecePositions.put(piece, position);
-            if(piece instanceof King){
-                if(piece.getColor())
-                    this.whiteKing = (King) piece;
-                else
-                    this.blackKing = (King) piece;
-            }
         }
         squares[position.row()][position.column()] = piece;
     }
@@ -148,11 +138,10 @@ public class Board {
 
 
     public boolean isChecked(boolean isWhite) {
-        Piece kingPiece = getKing(isWhite);
-        if (kingPiece == null)
+        Position kingPosition = findPiecePosition(King.class, isWhite);
+        if (kingPosition == null) {
             return false;
-
-        Position kingPosition = piecePositions.get(kingPiece);
+        }
         
         // Si alguna pieza enemiga puede moverse hasta el rey, es jaque
         for (Map.Entry<Piece, Position> entry : piecePositions.entrySet()) {
@@ -176,23 +165,15 @@ public class Board {
                 && Math.abs(last.move().end().row() - last.move().start().row()) == 2;
     }
 
-
-    public Piece findPiece(Class<? extends Piece> type, boolean isWhite) {
+    // Obtiene una pieza segun el tipo y color
+    public Position findPiecePosition(Class<? extends Piece> type, boolean isWhite) {
         for (Map.Entry<Piece, Position> entry : piecePositions.entrySet()) {
             Piece piece = entry.getKey();
             if (piece.getColor() == isWhite && type.isInstance(piece)) {
-                return piece;
+                return entry.getValue();
             }
         }
         return null;
-    }
-
-    public Piece[][] getSquares(){
-        return squares;
-    }
-
-    public King getKing(boolean isWhite){
-        return isWhite ? this.whiteKing : this.blackKing;
     }
 
     public Map<Piece, Position> getPiecePositions(){
@@ -202,9 +183,6 @@ public class Board {
     private boolean isValidPosition(Position position) {
         return position.row() >= 0 && position.row() < 8 && position.column() >= 0 && position.column() < 8;
     }
-
-
-
 
     private PlayResult doCastle(Position start, Position end) {
         Piece king = getPiece(start);
