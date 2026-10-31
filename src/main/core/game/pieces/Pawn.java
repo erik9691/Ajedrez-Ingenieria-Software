@@ -45,6 +45,7 @@ public class Pawn extends Piece {
             }
             return MoveVerdict.VALID;
         }
+        
         // Para comer en diagonal
         if (columnDifference == 1 && rowDifference == direction) {
             Piece target = board.getPiece(end);

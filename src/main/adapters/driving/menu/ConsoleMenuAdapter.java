@@ -23,8 +23,9 @@ public class ConsoleMenuAdapter implements MenuPort {
 
     @Override
     public void configureAndStartGame() {
+
         // Obtener configuración de la partida
-        GameOption option = chooseOption();
+        GameOption option = chooseOption(); //Game Option -> local, AI, StockFish
 
         boolean humanIsWhite = true;
 

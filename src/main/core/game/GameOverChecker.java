@@ -77,9 +77,11 @@ public class GameOverChecker {
 
     private boolean tryKingMoves(boolean isWhite) {
         Position kingPosition = board.findPiecePosition(King.class, isWhite);
+
         if (kingPosition == null) {
             return false;
         }
+
         Piece kingPiece = board.getPiece(kingPosition);
 
         // Prueba las 8 casillas adyacentes al rey
@@ -90,6 +92,7 @@ public class GameOverChecker {
 
                 // Simula el movimiento para validar si un movimiento lo saca del jaque
                 Piece captured = board.getPiece(to);
+
                 if (board.tryMove(kingPosition, to) == PlayResult.LEGAL) {
                     // Revertir la simulacion
                     board.setPiece(to, captured);
@@ -103,6 +106,7 @@ public class GameOverChecker {
 
     private boolean tryCaptureChecker(boolean isWhite) {
         Position kingPosition = board.findPiecePosition(King.class, isWhite);
+
         if (kingPosition == null) {
             return false;
         }
@@ -119,6 +123,7 @@ public class GameOverChecker {
                 checkerCount++;
             }
         }
+
         // Con doble jaque no alcanza con capturar una sola pieza
         if (checkerCount != 1) {
             return false;
@@ -147,6 +152,7 @@ public class GameOverChecker {
 
     private boolean tryBlockMoves(boolean isWhite) {
         Position kingPosition = board.findPiecePosition(King.class, isWhite);
+        
         if (kingPosition == null) {
             return false;
         }
@@ -171,6 +177,7 @@ public class GameOverChecker {
         }
 
         Piece checkerPiece = board.getPiece(checkerPosition);
+
         if (!(checkerPiece instanceof Rook || checkerPiece instanceof Bishop || checkerPiece instanceof Queen)) {
             return false;
         }
@@ -211,7 +218,7 @@ public class GameOverChecker {
 
 
 
-    // Material insuficiente: con lo que queda nadie puede dar jaque mate
+    // Material insuficiente: con las piezas que quedan nadie puede dar jaque mate
     public boolean isInsufficientMaterial() {
 
         // Guarda los alfiles y caballos que quedan (los reyes no cuentan)
@@ -330,7 +337,8 @@ public class GameOverChecker {
             return false;
         }
 
-        int repetitions = 1; // la posicion actual
+        int repetitions = 1; // la posicion 
+        
         // Solo las k pares conservan el turno actual
         for (int k = 2; k <= recentMoves.size(); k += 2) {
             int from = recentMoves.size() - k;

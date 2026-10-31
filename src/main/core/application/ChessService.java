@@ -55,8 +55,9 @@ public class ChessService {
         PlayResult currentResult = PlayResult.NONE;
 
         Move playerMove = playerInput.requestMove(game.getBoardView());
+
         if (playerMove == null) {
-            display.displayMessage(PlayResult.FORFEIT);
+            display.displayMessage(PlayResult.FORFEIT); //el jugador abandono basicamente
             return PlayResult.FORFEIT;
         }
 

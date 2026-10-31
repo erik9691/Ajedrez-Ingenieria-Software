@@ -21,17 +21,21 @@ public class RandomMovesAI implements PlayerInputPort {
         // final la decide el GameManager, que la rechaza y el servicio vuelve a pedir.
         while (true) {
             Position start = randomSquare();
+
             PieceView piece = board.pieceAt(start.row(), start.column());
-            if (piece == null) {
+
+            if (piece == null) { //Origen debe tener pieza
                 continue;
             }
 
-            Position end = randomSquare();
-            if (end.equals(start)) {
+            Position end = randomSquare(); 
+            if (end.equals(start)) { //el destino debe ser distinto
                 continue;
             }
+
             PieceView target = board.pieceAt(end.row(), end.column());
-            if (target != null && target.isWhite() == piece.isWhite()) {
+
+            if (target != null && target.isWhite() == piece.isWhite()) { //no tener una pieza del mismo color que la elegida
                 continue;
             }
 

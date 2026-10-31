@@ -43,10 +43,13 @@ public class ConsoleInputAdapter implements PlayerInputPort {
                 return null;
             }
             String choice = scanner.nextLine();
+            
             if (choice.isEmpty()) {
                 continue;
             }
+
             PromotionId piece = parsePromotionPiece(choice.charAt(0));
+
             if (piece == null) {
                 System.out.println("Error: elección inválida. Usá Q, R, B o N.");
                 continue;

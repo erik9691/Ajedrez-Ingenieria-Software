@@ -41,6 +41,7 @@ public class Board {
 
     public void setPiece(Position position, Piece piece) {
         Piece previousPiece = squares[position.row()][position.column()];
+
         // Si se reemplaza o se saca una pieza, se la quita del diccionario
         if (previousPiece != null) {
             piecePositions.remove(previousPiece);
@@ -66,42 +67,54 @@ public class Board {
     }
 
     public PlayResult tryMove(Position start, Position end) {
+
         // Evita salirse del tablero (ej. el rey en un borde probando casillas adyacentes)
         if (!isValidPosition(start) || !isValidPosition(end)) {
             return PlayResult.OUT_OF_BOUNDS;
         }
+
         Piece startPiece = getPiece(start);
         Piece endPiece = getPiece(end);
+
         // Validar que se haya elegido una pieza para mover
         if (startPiece == null) {
             return PlayResult.NO_PIECE;
         }
+
         // Validar que la pieza a comer es de otro color
         if (endPiece != null && endPiece.getColor() == startPiece.getColor()) {
             return PlayResult.OWN_PIECE_CAPTURE;
         }
+
         // Validacion especifica de cada pieza
         MoveVerdict verdict = startPiece.canMove(this, start, end);
+        
         if (verdict == MoveVerdict.INVALID) {
             return PlayResult.ILLEGAL;
         }
+
         // Movimiento valido/de promocion
         if(verdict == MoveVerdict.VALID || verdict == MoveVerdict.PROMOTION) {
+
             // Mueve la pieza
             setPiece(start, null);
             setPiece(end, startPiece);
+
             // Si al final del movimiento está en jaque no se permite el movimiento
             if (isChecked(startPiece.getColor())){
                 setPiece(end, endPiece);
                 setPiece(start, startPiece);
                 return PlayResult.SELF_MATE;
             }
+
             // Marca el rey/la torre como movida para validar el enroque
             if (startPiece instanceof King k) k.markAsMoved();
             else if (startPiece instanceof Rook r) r.markAsMoved();
+
             // El return cambia si el movimiento dejo la pieza en promocion
             return verdict == MoveVerdict.PROMOTION ? PlayResult.PROMOTION_PENDING : PlayResult.LEGAL;
         }
+        
         // Enroque
         if(verdict == MoveVerdict.CASTLE) {
             return doCastle(start, end);
