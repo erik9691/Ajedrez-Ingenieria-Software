@@ -1,5 +1,6 @@
 package main.core.application;
 
+import main.ports.in.MatchRunnerPort;
 import main.core.flags.PlayResult;
 import main.core.flags.PromotionId;
 import main.core.managers.GameManager;
@@ -12,11 +13,11 @@ import main.ports.out.PlayerInputPort;
 //Eso está mal, ya que un adaptador de inputs se encarga de mantener corriendo el juego
 //Todo el juego pasa por este service, y este service llama a peticiones de los Input, no al revés
 
-public class ChessService {
-    protected final GameManager game;
-    protected final DisplayPort display;
-    protected final PlayerInputPort whiteInput;
-    protected final PlayerInputPort blackInput;
+public class ChessService implements MatchRunnerPort{
+    private final GameManager game;
+    private final DisplayPort display;
+    private final PlayerInputPort whiteInput;
+    private final PlayerInputPort blackInput;
 
     public ChessService(GameManager gameManager, DisplayPort displayPort, PlayerInputPort whitePlayerInputPort, PlayerInputPort blackPlayerInputPort) {
         this.game = gameManager;
@@ -43,7 +44,7 @@ public class ChessService {
     }
 
 
-    protected void initializeGame() {
+    private void initializeGame() {
         game.startGame();
         display.displayGameStart();
         display.displayBoard(game.getBoardView());
@@ -51,7 +52,7 @@ public class ChessService {
     }
 
 
-    protected PlayResult playTurn(PlayerInputPort playerInput){
+    private PlayResult playTurn(PlayerInputPort playerInput){
         PlayResult currentResult = PlayResult.NONE;
 
         Move playerMove = playerInput.requestMove(game.getBoardView());
@@ -90,7 +91,7 @@ public class ChessService {
     }
 
 
-    protected Boolean decideWinner(PlayResult lastResult) {
+    private Boolean decideWinner(PlayResult lastResult) {
         if(lastResult == PlayResult.CHECKMATE || lastResult == PlayResult.FORFEIT)
             return !game.isWhiteTurn();
 

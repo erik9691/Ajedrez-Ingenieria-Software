@@ -9,4 +9,4 @@ case "$(uname -s)" in
 esac
 
 javac -d out $(find src/main -name "*.java")
-java -cp out Main --os "$OS" "$@"
+java -cp out main.Main --os "$OS" "$@"

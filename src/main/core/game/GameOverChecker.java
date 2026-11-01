@@ -7,7 +7,6 @@ import java.util.Map;
 
 import main.core.flags.MoveVerdict;
 import main.core.flags.PlayResult;
-import main.core.game.MoveHistory;
 import main.core.models.MoveRecord;
 import main.core.models.Position;
 import main.core.game.pieces.Bishop;
@@ -76,7 +75,7 @@ public class GameOverChecker {
 
 
     private boolean tryKingMoves(boolean isWhite) {
-        Position kingPosition = board.findPiecePosition(King.class, isWhite);
+        Position kingPosition = board.findKingPosition(isWhite);
 
         if (kingPosition == null) {
             return false;
@@ -105,7 +104,7 @@ public class GameOverChecker {
     }
 
     private boolean tryCaptureChecker(boolean isWhite) {
-        Position kingPosition = board.findPiecePosition(King.class, isWhite);
+        Position kingPosition = board.findKingPosition(isWhite);
 
         if (kingPosition == null) {
             return false;
@@ -151,7 +150,7 @@ public class GameOverChecker {
     }
 
     private boolean tryBlockMoves(boolean isWhite) {
-        Position kingPosition = board.findPiecePosition(King.class, isWhite);
+        Position kingPosition = board.findKingPosition(isWhite);
         
         if (kingPosition == null) {
             return false;

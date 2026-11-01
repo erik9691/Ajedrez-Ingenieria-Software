@@ -8,7 +8,6 @@ import main.core.models.MoveRecord;
 import main.core.models.Position;
 import main.core.flags.MoveVerdict;
 import main.core.flags.PlayResult;
-import main.core.game.MoveHistory;
 import main.ports.dto.BoardView;
 import main.ports.dto.PieceView;
 
@@ -151,7 +150,7 @@ public class Board {
 
 
     public boolean isChecked(boolean isWhite) {
-        Position kingPosition = findPiecePosition(King.class, isWhite);
+        Position kingPosition = findKingPosition(isWhite);
         if (kingPosition == null) {
             return false;
         }
@@ -178,11 +177,11 @@ public class Board {
                 && Math.abs(last.move().end().row() - last.move().start().row()) == 2;
     }
 
-    // Obtiene una pieza segun el tipo y color
-    public Position findPiecePosition(Class<? extends Piece> type, boolean isWhite) {
+    // Obtiene el rey según color
+    public Position findKingPosition(boolean isWhite) {
         for (Map.Entry<Piece, Position> entry : piecePositions.entrySet()) {
             Piece piece = entry.getKey();
-            if (piece.getColor() == isWhite && type.isInstance(piece)) {
+            if (piece.getColor() == isWhite && piece instanceof King) {
                 return entry.getValue();
             }
         }

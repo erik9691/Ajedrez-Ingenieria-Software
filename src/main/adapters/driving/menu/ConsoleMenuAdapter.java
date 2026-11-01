@@ -14,14 +14,13 @@ import main.core.game.GameOverChecker;
 import main.core.game.MoveHistory;
 import main.core.managers.GameManager;
 import main.core.models.GameOption;
-import main.ports.in.MenuPort;
+import main.ports.in.MatchRunnerPort;
 import main.ports.out.PlayerInputPort;
 
-public class ConsoleMenuAdapter implements MenuPort {
+public class ConsoleMenuAdapter {
 
     private final Scanner scanner = ConsoleScanner.getInstance();
 
-    @Override
     public void configureAndStartGame() {
 
         // Obtener configuración de la partida
@@ -78,14 +77,14 @@ public class ConsoleMenuAdapter implements MenuPort {
         }
 
         // Crear y ejecutar ChessService
-        ChessService chessService = new ChessService(
+        MatchRunnerPort matchRunner = new ChessService(
             game,
             display,
             whiteInput,
             blackInput
         );
 
-        chessService.runGame();
+        matchRunner.runGame();
     }
 
     private GameOption chooseOption() {
