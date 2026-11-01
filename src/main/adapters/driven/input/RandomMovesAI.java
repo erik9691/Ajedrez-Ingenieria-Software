@@ -5,18 +5,36 @@ import java.util.Random;
 import main.core.flags.PromotionId;
 import main.core.models.Move;
 import main.core.models.Position;
+import main.core.time.PlayerClock;
 import main.ports.dto.BoardView;
+import main.ports.dto.InputResult;
 import main.ports.dto.PieceView;
+import main.ports.dto.PlayerStatus;
 import main.ports.out.PlayerInputPort;
 
 //IA que elige movimientos random
 //Provisional
 
 public class RandomMovesAI implements PlayerInputPort {
+    private static final long TURN_TIME_MS = 5_000; // cada turno descuenta 5 segundos fijos
+
     private final Random random = new Random();
+    private PlayerClock clock;
 
     @Override
-    public Move requestMove(BoardView board) {
+    public void setClock(PlayerClock clock) {
+        this.clock = clock;
+    }
+
+    @Override
+    public InputResult requestMove(BoardView board) {
+        if (clock != null) {
+            if (clock.isExpired()) {
+                return new InputResult(null, PlayerStatus.TIME_OVER);
+            }
+            clock.reduceTime(TURN_TIME_MS);
+        }
+
         // Tira casillas al azar hasta obtener una jugada plausible; la validez
         // final la decide el GameManager, que la rechaza y el servicio vuelve a pedir.
         while (true) {
@@ -39,7 +57,7 @@ public class RandomMovesAI implements PlayerInputPort {
                 continue;
             }
 
-            return new Move(start, end);
+            return new InputResult(new Move(start, end), PlayerStatus.OK);
         }
     }
 

@@ -10,18 +10,23 @@ import java.nio.charset.StandardCharsets;
 import main.core.flags.PromotionId;
 import main.core.models.Move;
 import main.core.models.Position;
+import main.core.time.PlayerClock;
 import main.ports.dto.BoardView;
+import main.ports.dto.InputResult;
 import main.ports.dto.PieceView;
+import main.ports.dto.PlayerStatus;
 import main.ports.out.PlayerInputPort;
 
 //IA que delega en el motor Stockfish 11 por protocolo UCI (stdin/stdout).
 public class StockfishElevenAI implements PlayerInputPort {
     
     private static final long MOVE_TIME_MS = 500;
+    private static final long TURN_TIME_MS = 5_000; // cada turno descuenta 5 segundos fijos
 
     private String enginePath;
     private final boolean playsWhite;
     private final RandomMovesAI fallback = new RandomMovesAI();
+    private PlayerClock clock;
 
     private PrintWriter engineIn;
     private BufferedReader engineOut;
@@ -38,7 +43,19 @@ public class StockfishElevenAI implements PlayerInputPort {
     }
 
     @Override
-    public Move requestMove(BoardView board) {
+    public void setClock(PlayerClock clock) {
+        this.clock = clock;
+    }
+
+    @Override
+    public InputResult requestMove(BoardView board) {
+        if (clock != null) {
+            if (clock.isExpired()) {
+                return new InputResult(null, PlayerStatus.TIME_OVER);
+            }
+            clock.reduceTime(TURN_TIME_MS);
+        }
+
         String canonicalFen = toFen(board, true);
         String fenToSend;
 
@@ -66,9 +83,9 @@ public class StockfishElevenAI implements PlayerInputPort {
         }
         // e7e8q: la pieza de promoción queda cacheada para requestPromotion
         pendingPromotion = bestmove.length() == 5 ? bestmove.charAt(4) : '\0';
-        return new Move(
-            squareToPosition(bestmove.substring(0, 2)),
-            squareToPosition(bestmove.substring(2, 4))
+        return new InputResult(
+            new Move(squareToPosition(bestmove.substring(0, 2)), squareToPosition(bestmove.substring(2, 4))),
+            PlayerStatus.OK
         );
     }
 
@@ -82,7 +99,7 @@ public class StockfishElevenAI implements PlayerInputPort {
         };
     }
 
-    private Move randomFallbackMove(BoardView board) {
+    private InputResult randomFallbackMove(BoardView board) {
         pendingPromotion = '\0';
         System.out.println("FAIL-STOCKFISH");
         return fallback.requestMove(board);

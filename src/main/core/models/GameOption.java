@@ -3,5 +3,6 @@ package main.core.models;
 public enum GameOption {
     LOCAL,
     VS_AI,
-    VS_STOCKFISH
+    VS_STOCKFISH,
+    STOCKFISH_VS_AI
 }

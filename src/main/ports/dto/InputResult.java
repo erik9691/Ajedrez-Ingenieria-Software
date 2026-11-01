@@ -1,9 +1,5 @@
 package main.ports.dto;
 
-public enum InputResult {
-    ACCEPTED,
-    REJECTED,
-    PROMOTION_PENDING,
-    GAME_OVER
-}
+import main.core.models.Move;
 
+public record InputResult (Move move, PlayerStatus status){}

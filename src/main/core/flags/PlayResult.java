@@ -16,6 +16,7 @@ public enum PlayResult {
     DRAW,
     STALEMATE,
     FORFEIT,
+    TIME_OVER,
     NONE;
 
     // true si la jugada fue aceptada, false si fue rechazada.

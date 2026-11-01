@@ -14,6 +14,7 @@ import main.core.game.GameOverChecker;
 import main.core.game.MoveHistory;
 import main.core.managers.GameManager;
 import main.core.models.GameOption;
+import main.core.time.PlayerClock;
 import main.ports.in.MatchRunnerPort;
 import main.ports.out.PlayerInputPort;
 
@@ -26,9 +27,12 @@ public class ConsoleMenuAdapter {
         // Obtener configuración de la partida
         GameOption option = chooseOption(); //Game Option -> local, AI, StockFish
 
+        // Elegir control de tiempo
+        PlayerClock timeControl = chooseTimeControl();
+
         boolean humanIsWhite = true;
 
-        if (option != GameOption.LOCAL) {
+        if (option != GameOption.LOCAL && option != GameOption.STOCKFISH_VS_AI) {
             humanIsWhite = choosePlayerColor();
         }
 
@@ -73,6 +77,17 @@ public class ConsoleMenuAdapter {
                 blackInput = humanIsWhite ? ai : new ConsoleInputAdapter();
             }
 
+            case STOCKFISH_VS_AI -> {
+                String path = enginePath();
+
+                if (path == null) {
+                    throw new IllegalStateException("Sistema operativo no compatible con Stockfish.");
+                }
+
+                whiteInput = new StockfishElevenAI(true, path);
+                blackInput = new RandomMovesAI();
+            }
+
             default -> throw new IllegalStateException("Modo de juego desconocido");
         }
 
@@ -81,7 +96,8 @@ public class ConsoleMenuAdapter {
             game,
             display,
             whiteInput,
-            blackInput
+            blackInput,
+            timeControl
         );
 
         matchRunner.runGame();
@@ -93,6 +109,7 @@ public class ConsoleMenuAdapter {
             System.out.println("1. Local");
             System.out.println("2. Contra la IA");
             System.out.println("3. Contra Stockfish");
+            System.out.println("4. Stockfish vs IA Random");
             System.out.print("Opción: ");
 
             if (!scanner.hasNextLine()) {
@@ -103,8 +120,35 @@ public class ConsoleMenuAdapter {
                 case "1" -> { return GameOption.LOCAL; }
                 case "2" -> { return GameOption.VS_AI; }
                 case "3" -> { return GameOption.VS_STOCKFISH; }
+                case "4" -> { return GameOption.STOCKFISH_VS_AI; }
                 default -> System.out.println(
-                    "Opción inválida. Elegí 1, 2 o 3."
+                    "Opción inválida. Elegí 1, 2, 3 o 4."
+                );
+            }
+        }
+    }
+
+    // Devuelve null si se juega sin reloj; ChessService ya lo contempla.
+    private PlayerClock chooseTimeControl() {
+        while (true) {
+            System.out.println("Elegí el control de tiempo:");
+            System.out.println("1. Sin tiempo");
+            System.out.println("2. Clásica (90 min)");
+            System.out.println("3. Rápida (30 min)");
+            System.out.println("4. Blitz (10 min)");
+            System.out.print("Opción: ");
+
+            if (!scanner.hasNextLine()) {
+                return null;
+            }
+
+            switch (scanner.nextLine().trim()) {
+                case "1" -> { return null; }
+                case "2" -> { return new PlayerClock(90 * 60_000L); }
+                case "3" -> { return new PlayerClock(30 * 60_000L); }
+                case "4" -> { return new PlayerClock(10 * 60_000L); }
+                default -> System.out.println(
+                    "Opción inválida. Elegí 1, 2, 3 o 4."
                 );
             }
         }

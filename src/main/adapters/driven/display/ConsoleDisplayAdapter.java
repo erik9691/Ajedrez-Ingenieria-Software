@@ -7,14 +7,16 @@ import java.nio.file.StandardCopyOption;
 
 import main.core.flags.PlayResult;
 import main.ports.dto.BoardView;
+import main.ports.dto.ClockView;
 import main.ports.dto.PieceView;
 import main.ports.out.DisplayPort;
 
 // Muestra el tablero en una consola aparte: al empezar la partida lanza una
-// terminal nueva que lee un archivo y redibuja la pantalla (borrando y volviendo
-// a imprimir) cada vez que el archivo cambia. La consola que ejecuta run.sh
-// queda solo para el input y los mensajes de la partida.
-// El reloj es un placeholder: su comportamiento todavía no está definido.
+// terminal nueva que lee un archivo y redibuja la pantalla cada vez que cambia.
+// La consola que ejecuta run.sh queda solo para el input y los mensajes.
+// El conteo en vivo del reloj lo hace el loop de la ventana: el archivo lleva
+// una línea oculta (#CLOCK) con el snapshot de los relojes y el loop descuenta
+// el tiempo transcurrido usando el mtime del archivo como referencia.
 public class ConsoleDisplayAdapter implements DisplayPort {
 
     // Terminales soportadas, en orden de preferencia. Cada entrada es el binario
@@ -27,8 +29,6 @@ public class ConsoleDisplayAdapter implements DisplayPort {
             { "alacritty", "-e" },
             { "gnome-terminal", "--" },
     };
-
-    private static final long PLACEHOLDER_MILLIS = 5 * 60_000L;
 
     private final Path boardFile = Path.of("/tmp", "ajedrez-board-" + ProcessHandle.current().pid() + ".txt");
     private Process boardWindow;
@@ -46,10 +46,11 @@ public class ConsoleDisplayAdapter implements DisplayPort {
     }
 
     @Override
-    public void displayBoard(BoardView board) {
-        String content = renderBoard(board);
+    public void displayBoard(BoardView board, ClockView clock) {
+        String content = renderBoard(board, clock);
         if (windowOpen) {
-            writeBoardFile(content);
+            String fileContent = clock == null ? content : clockMetadata(clock) + "\n" + content;
+            writeBoardFile(fileContent);
         } else {
             System.out.println(content);
         }
@@ -72,6 +73,7 @@ public class ConsoleDisplayAdapter implements DisplayPort {
             case DRAW -> "Empate.";
             case STALEMATE -> "Tablas por ahogado.";
             case FORFEIT -> "El jugador abandonó la partida.";
+            case TIME_OVER -> "El jugador se quedó sin tiempo!.";
             case NONE -> "";
         });
     }
@@ -110,12 +112,7 @@ public class ConsoleDisplayAdapter implements DisplayPort {
             return;
         }
 
-        // El loop redibuja solo cuando el archivo cambia (comparando mtime),
-        // así la ventana no parpadea entre movimientos.
-        String loop = "f=\"" + boardFile + "\"; o=\"\"; while true; do "
-                + "n=$(stat -c %y \"$f\" 2>/dev/null); "
-                + "[ \"$n\" = \"$o\" ] || { clear; cat \"$f\"; o=\"$n\"; }; "
-                + "sleep 0.2; done";
+        String loop = buildDisplayLoop();
 
         for (String[] terminal : TERMINALS) {
             String[] command = new String[terminal.length + 3];
@@ -132,6 +129,26 @@ public class ConsoleDisplayAdapter implements DisplayPort {
             }
         }
         System.out.println("(No se encontró una terminal para el tablero: se imprime en esta consola.)");
+    }
+
+    // Loop de la ventana: redibuja cuando el archivo cambia y, si hay snapshot
+    // de reloj, cuenta hacia abajo al jugador activo una vez por segundo.
+    // El mtime del archivo marca el momento del snapshot.
+    private String buildDisplayLoop() {
+        return "f=\"" + boardFile + "\"; m=\"\"; shown=\"\"; while true; do "
+                + "m2=$(stat -c %Y \"$f\" 2>/dev/null); "
+                + "if [ \"$m2\" != \"$m\" ]; then m=\"$m2\"; meta=$(sed -n 's/^#CLOCK //p' \"$f\" | head -1); fi; "
+                + "if [ -z \"$meta\" ]; then "
+                + "if [ \"$m2\" != \"$shown\" ]; then clear; cat \"$f\"; shown=\"$m2\"; fi; "
+                + "else "
+                + "now=$(date +%s); set -- $meta; wrem=$2; brem=$4; "
+                + "if [ \"$6\" = \"W\" ]; then wrem=$(( wrem - (now - m2) * 1000 )); else brem=$(( brem - (now - m2) * 1000 )); fi; "
+                + "[ \"$wrem\" -lt 0 ] && wrem=0; [ \"$brem\" -lt 0 ] && brem=0; "
+                + "ws=$(( wrem / 1000 )); bs=$(( brem / 1000 )); "
+                + "clockline=$(printf \"Blancas: %02d:%02d  Negras: %02d:%02d\" $(( ws / 60 )) $(( ws % 60 )) $(( bs / 60 )) $(( bs % 60 ))); "
+                + "body=$(sed -e '/^#CLOCK/d' -e \"1s/.*/$clockline/\" \"$f\"); "
+                + "if [ \"$body\" != \"$shown\" ]; then clear; printf '%s\\n' \"$body\"; shown=\"$body\"; fi; "
+                + "fi; sleep 0.2; done";
     }
 
     private void closeBoardWindow() {
@@ -153,10 +170,19 @@ public class ConsoleDisplayAdapter implements DisplayPort {
         }
     }
 
-    private String renderBoard(BoardView board) {
+    // Línea oculta con el snapshot; el loop la usa para el countdown y la filtra al mostrar.
+    private String clockMetadata(ClockView clock) {
+        return "#CLOCK W " + clock.whiteMillis()
+                + " B " + clock.blackMillis()
+                + " A " + (clock.whiteTurn() ? "W" : "B");
+    }
+
+    private String renderBoard(BoardView board, ClockView clock) {
         StringBuilder content = new StringBuilder();
-        content.append("Blancas: ").append(formatClock(PLACEHOLDER_MILLIS))
-                .append("  Negras: ").append(formatClock(PLACEHOLDER_MILLIS)).append('\n');
+        if (clock != null) {
+            content.append("Blancas: ").append(formatClock(clock.whiteMillis()))
+                    .append("  Negras: ").append(formatClock(clock.blackMillis())).append('\n');
+        }
         content.append('\n');
         content.append("    a b c d e f g h\n");
         content.append("  +-----------------+\n");
