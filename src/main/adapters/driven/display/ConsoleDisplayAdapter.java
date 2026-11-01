@@ -40,7 +40,7 @@ public class ConsoleDisplayAdapter implements DisplayPort {
 
     @Override
     public void displayGameStart() {
-        System.out.println("¡Comienza la partida!");
+        System.out.println("¡Comienza la partida! (Escribir CHAU para rendirse)");
         writeBoardFile("Preparando tablero...");
         openBoardWindow();
     }

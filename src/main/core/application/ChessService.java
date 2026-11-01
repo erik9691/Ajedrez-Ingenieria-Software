@@ -69,6 +69,8 @@ public class ChessService implements MatchRunnerPort{
         display.displayTurn(game.isWhiteTurn());
 
         //los relojes pueden venir vacios (sin limite de tiempo)
+        //La gestion de resumir y pausar el reloj lo hace cada adaptador, no el nucleo. Solamente se los seteamos.
+        //Así por ejemplo las IAs miden el tiempo diferente (-5s fijos por turno)
         if(whiteClock != null && blackClock != null){
             whiteInput.setClock(whiteClock);
             blackInput.setClock(blackClock);
