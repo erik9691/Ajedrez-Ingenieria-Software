@@ -34,7 +34,7 @@ public class BoardTest {
         Knight knight = new Knight(true);
         board.setPiece(start, knight);
 
-        // Act
+           // Act
         PlayResult result = board.tryMove(start, outOfBoundsEnd);
 
         // Assert
