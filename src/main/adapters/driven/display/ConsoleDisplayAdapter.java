@@ -30,7 +30,7 @@ public class ConsoleDisplayAdapter implements DisplayPort {
             { "gnome-terminal", "--" },
     };
 
-    private final Path boardFile = Path.of("/tmp", "ajedrez-board-" + ProcessHandle.current().pid() + ".txt");
+    private final Path boardFile = Path.of(System.getProperty("java.io.tmpdir"), "ajedrez-board-" + ProcessHandle.current().pid() + ".txt");
     private Process boardWindow;
     private boolean windowOpen;
 

@@ -27,6 +27,6 @@ public enum PlayResult {
     
     //resultados que terminan la partida: jaquemate, rey ahogado, abandono/rendicion, empate general.
     public boolean isFinal() {
-        return this == CHECKMATE || this == STALEMATE || this == FORFEIT || this == DRAW;
+        return this == CHECKMATE || this == STALEMATE || this == FORFEIT || this == TIME_OVER || this == DRAW;
     }
 }

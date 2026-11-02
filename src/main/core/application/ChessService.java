@@ -104,6 +104,12 @@ public class ChessService implements MatchRunnerPort{
         while(currentResult == PlayResult.PROMOTION_PENDING ){
             display.displayPromotionMenu(game.getBoardView());
             PromotionId promotedPiece = playerInput.requestPromotion(game.getBoardView());
+
+            // La entrada cerrada durante la promocion equivale a abandonar.
+            if (promotedPiece == null) {
+                display.displayMessage(PlayResult.FORFEIT);
+                return PlayResult.FORFEIT;
+            }
             PlayResult promotedResult = game.promotePawn(promotedPiece);
 
             if (!promotedResult.isLegal()) {
