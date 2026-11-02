@@ -1,5 +1,7 @@
 package main.adapters.driven.input;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import main.core.flags.PromotionId;
@@ -35,16 +37,13 @@ public class RandomMovesAI implements PlayerInputPort {
             clock.reduceTime(TURN_TIME_MS);
         }
 
-        // Tira casillas al azar hasta obtener una jugada plausible; la validez
+        // Tira piezas al azar hasta obtener una jugada plausible; la validez
         // final la decide el GameManager, que la rechaza y el servicio vuelve a pedir.
+        List<Position> occupied = occupiedSquares(board);
+
         while (true) {
-            Position start = randomSquare();
-
+            Position start = occupied.get(random.nextInt(occupied.size()));
             PieceView piece = board.pieceAt(start.row(), start.column());
-
-            if (piece == null) { //Origen debe tener pieza
-                continue;
-            }
 
             Position end = randomSquare(); 
             if (end.equals(start)) { //el destino debe ser distinto
@@ -65,6 +64,19 @@ public class RandomMovesAI implements PlayerInputPort {
     public PromotionId requestPromotion(BoardView board) {
         PromotionId[] options = PromotionId.values();
         return options[random.nextInt(options.length)];
+    }
+
+    // Casillas ocupadas: el origen sale de acá para no desperdiciar intentos en vacías.
+    private List<Position> occupiedSquares(BoardView board) {
+        List<Position> occupied = new ArrayList<>();
+        for (int row = 0; row < BoardView.SIZE; row++) {
+            for (int column = 0; column < BoardView.SIZE; column++) {
+                if (board.pieceAt(row, column) != null) {
+                    occupied.add(new Position(row, column));
+                }
+            }
+        }
+        return occupied;
     }
 
     private Position randomSquare() {

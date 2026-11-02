@@ -32,7 +32,9 @@ public class ConsoleMenuAdapter {
 
         boolean humanIsWhite = true;
 
-        if (option != GameOption.LOCAL && option != GameOption.STOCKFISH_VS_AI) {
+        if (option != GameOption.LOCAL
+            && option != GameOption.STOCKFISH_VS_AI
+            && option != GameOption.STOCKFISH_VS_STOCKFISH) {
             humanIsWhite = choosePlayerColor();
         }
 
@@ -88,6 +90,17 @@ public class ConsoleMenuAdapter {
                 blackInput = new RandomMovesAI();
             }
 
+            case STOCKFISH_VS_STOCKFISH -> {
+                String path = enginePath();
+
+                if (path == null) {
+                    throw new IllegalStateException("Sistema operativo no compatible con Stockfish.");
+                }
+
+                whiteInput = new StockfishElevenAI(true, path);
+                blackInput = new StockfishElevenAI(false, path);
+            }
+
             default -> throw new IllegalStateException("Modo de juego desconocido");
         }
 
@@ -107,9 +120,10 @@ public class ConsoleMenuAdapter {
         while (true) {
             System.out.println("Elegí el modo de juego:");
             System.out.println("1. Local");
-            System.out.println("2. Contra la IA");
+            System.out.println("2. Contra la IA Random");
             System.out.println("3. Contra Stockfish");
             System.out.println("4. Stockfish vs IA Random");
+            System.out.println("5. Stockfish vs Stockfish");
             System.out.print("Opción: ");
 
             if (!scanner.hasNextLine()) {
@@ -121,8 +135,9 @@ public class ConsoleMenuAdapter {
                 case "2" -> { return GameOption.VS_AI; }
                 case "3" -> { return GameOption.VS_STOCKFISH; }
                 case "4" -> { return GameOption.STOCKFISH_VS_AI; }
+                case "5" -> { return GameOption.STOCKFISH_VS_STOCKFISH; }
                 default -> System.out.println(
-                    "Opción inválida. Elegí 1, 2, 3 o 4."
+                    "Opción inválida. Elegí 1, 2, 3, 4 o 5."
                 );
             }
         }

@@ -4,5 +4,6 @@ public enum GameOption {
     LOCAL,
     VS_AI,
     VS_STOCKFISH,
-    STOCKFISH_VS_AI
+    STOCKFISH_VS_AI,
+    STOCKFISH_VS_STOCKFISH
 }

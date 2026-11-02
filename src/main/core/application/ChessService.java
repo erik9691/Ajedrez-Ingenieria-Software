@@ -4,7 +4,6 @@ import main.ports.in.MatchRunnerPort;
 import main.core.flags.PlayResult;
 import main.core.flags.PromotionId;
 import main.core.managers.GameManager;
-import main.core.models.Move;
 import main.core.time.PlayerClock;
 import main.ports.dto.ClockView;
 import main.ports.dto.InputResult;
@@ -90,7 +89,7 @@ public class ChessService implements MatchRunnerPort{
 
         if (playerMove.status() == PlayerStatus.TIME_OVER) {
             display.displayMessage(PlayResult.TIME_OVER); //el jugador se quedo sin tiempo
-            return PlayResult.FORFEIT;
+            return PlayResult.TIME_OVER;
         }
 
         currentResult = game.movePiece(playerMove.move());
