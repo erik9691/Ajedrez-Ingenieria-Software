@@ -1,12 +1,9 @@
-#!/bin/bash
-set -e
-
+#!/usr/bin/env bash
+set -euo pipefail
+cd -- "$(dirname -- "$0")"
 case "$(uname -s)" in
-    Linux*)                 OS=linux ;;
-    Darwin*)                OS=mac ;;
-    MINGW*|MSYS*|CYGWIN*)   OS=windows ;;
-    *)                      OS=unknown ;;
+    Linux*) chmod +x engines/stockfish11/sf11-linux ;;
+    Darwin*) chmod +x engines/stockfish11/sf11-mac ;;
 esac
-
-javac -d out $(find src/main -name "*.java")
-java -cp out main.Main --os "$OS" "$@"
+javac --release 21 -encoding UTF-8 -d out -sourcepath src src/main/Main.java
+java -cp out main.Main "$@"
