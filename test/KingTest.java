@@ -1,13 +1,14 @@
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import main.core.flags.PlayResult;
 import main.core.game.Board;
 import main.core.game.MoveHistory;
 import main.core.game.pieces.King;
 import main.core.game.pieces.Knight;
 import main.core.game.pieces.Rook;
 import main.core.models.Position;
-import main.core.flags.PlayResult;
+
+import org.junit.jupiter.api.Test;
 
 public class KingTest {
 
@@ -28,11 +29,13 @@ public class KingTest {
         PlayResult result = board.tryMove(kingStart, kingEnd);
 
         // Assert
-        assertEquals(PlayResult.LEGAL, result, "El enroque corto deberia devolver PlayResult.LEGAL");
+        assertEquals(
+                PlayResult.LEGAL, result, "El enroque corto deberia devolver PlayResult.LEGAL");
         assertSame(king, board.getPiece(kingEnd), "El rey deberia terminar en la columna 6");
         assertSame(rook, board.getPiece(rookEnd), "La torre deberia terminar en la columna 5");
         assertNull(board.getPiece(kingStart), "La casilla original del rey deberia quedar vacia");
-        assertNull(board.getPiece(rookStart), "La casilla original de la torre deberia quedar vacia");
+        assertNull(
+                board.getPiece(rookStart), "La casilla original de la torre deberia quedar vacia");
     }
 
     @Test
@@ -52,11 +55,13 @@ public class KingTest {
         PlayResult result = board.tryMove(kingStart, kingEnd);
 
         // Assert
-        assertEquals(PlayResult.LEGAL, result, "El enroque largo deberia devolver PlayResult.LEGAL");
+        assertEquals(
+                PlayResult.LEGAL, result, "El enroque largo deberia devolver PlayResult.LEGAL");
         assertSame(king, board.getPiece(kingEnd), "El rey deberia terminar en la columna 2");
         assertSame(rook, board.getPiece(rookEnd), "La torre deberia terminar en la columna 3");
         assertNull(board.getPiece(kingStart), "La casilla original del rey deberia quedar vacia");
-        assertNull(board.getPiece(rookStart), "La casilla original de la torre deberia quedar vacia");
+        assertNull(
+                board.getPiece(rookStart), "La casilla original de la torre deberia quedar vacia");
     }
 
     @Test
@@ -75,7 +80,10 @@ public class KingTest {
         PlayResult result = board.tryMove(kingStart, kingEnd);
 
         // Assert
-        assertEquals(PlayResult.ILLEGAL, result, "Enrocar con un rey que ya se movio deberia ser ILLEGAL");
+        assertEquals(
+                PlayResult.ILLEGAL,
+                result,
+                "Enrocar con un rey que ya se movio deberia ser ILLEGAL");
     }
 
     @Test
@@ -94,7 +102,10 @@ public class KingTest {
         PlayResult result = board.tryMove(kingStart, kingEnd);
 
         // Assert
-        assertEquals(PlayResult.ILLEGAL, result, "Enrocar con una torre que ya se movio deberia ser ILLEGAL");
+        assertEquals(
+                PlayResult.ILLEGAL,
+                result,
+                "Enrocar con una torre que ya se movio deberia ser ILLEGAL");
     }
 
     @Test
@@ -112,7 +123,10 @@ public class KingTest {
         PlayResult result = board.tryMove(kingStart, kingEnd);
 
         // Assert
-        assertEquals(PlayResult.ILLEGAL, result, "Enrocar con una pieza entre el rey y la torre deberia ser ILLEGAL");
+        assertEquals(
+                PlayResult.ILLEGAL,
+                result,
+                "Enrocar con una pieza entre el rey y la torre deberia ser ILLEGAL");
     }
 
     @Test
@@ -142,13 +156,19 @@ public class KingTest {
         Position kingEnd = new Position(7, 6);
         board.setPiece(kingStart, king);
         board.setPiece(new Position(7, 7), new Rook(true));
-        board.setPiece(new Position(0, 5), new Rook(false)); // Ataca la casilla (7,5) por la que pasa el rey
+        board.setPiece(
+                new Position(0, 5),
+                new Rook(false)); // Ataca la casilla (7,5) por la que pasa el rey
 
         // Act
         PlayResult result = board.tryMove(kingStart, kingEnd);
 
         // Assert
-        assertEquals(PlayResult.ILLEGAL, result, "Enrocar pasando por una casilla atacada deberia ser ILLEGAL");
-        assertSame(king, board.getPiece(kingStart), "El rey deberia quedarse en su casilla original");
+        assertEquals(
+                PlayResult.ILLEGAL,
+                result,
+                "Enrocar pasando por una casilla atacada deberia ser ILLEGAL");
+        assertSame(
+                king, board.getPiece(kingStart), "El rey deberia quedarse en su casilla original");
     }
 }

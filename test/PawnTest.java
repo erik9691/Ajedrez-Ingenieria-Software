@@ -1,18 +1,19 @@
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import main.core.flags.MoveVerdict;
+import main.core.flags.PlayResult;
 import main.core.game.Board;
 import main.core.game.MoveHistory;
 import main.core.game.pieces.Pawn;
 import main.core.models.Move;
 import main.core.models.MoveRecord;
 import main.core.models.Position;
-import main.core.flags.MoveVerdict;
-import main.core.flags.PlayResult;
+
+import org.junit.jupiter.api.Test;
 
 public class PawnTest {
 
-    //  Captura al paso 
+    //  Captura al paso
 
     @Test
     public void canMove_enPassantRightAfterTwoTileAdvance_shouldReturnEnPassant() {
@@ -34,7 +35,11 @@ public class PawnTest {
         MoveVerdict verdict = whitePawn.canMove(board, whiteStart, end);
 
         // Assert
-        assertEquals(MoveVerdict.EN_PASSANT, verdict, "Un peon al lado de otro que acaba de avanzar 2 casillas deberia devolver MoveVerdict.EN_PASSANT");
+        assertEquals(
+                MoveVerdict.EN_PASSANT,
+                verdict,
+                "Un peon al lado de otro que acaba de avanzar 2 casillas deberia devolver"
+                        + " MoveVerdict.EN_PASSANT");
     }
 
     @Test
@@ -56,10 +61,18 @@ public class PawnTest {
         PlayResult result = board.tryMove(whiteStart, end);
 
         // Assert
-        assertEquals(PlayResult.LEGAL, result, "La captura al paso deberia devolver PlayResult.LEGAL");
-        assertSame(whitePawn, board.getPiece(end), "El peon blanco deberia quedar en la casilla de atras del peon negro");
-        assertNull(board.getPiece(blackEnd), "El peon negro capturado deberia desaparecer del tablero");
-        assertNull(board.getPiece(whiteStart), "La casilla original del peon blanco deberia quedar vacia");
+        assertEquals(
+                PlayResult.LEGAL, result, "La captura al paso deberia devolver PlayResult.LEGAL");
+        assertSame(
+                whitePawn,
+                board.getPiece(end),
+                "El peon blanco deberia quedar en la casilla de atras del peon negro");
+        assertNull(
+                board.getPiece(blackEnd),
+                "El peon negro capturado deberia desaparecer del tablero");
+        assertNull(
+                board.getPiece(whiteStart),
+                "La casilla original del peon blanco deberia quedar vacia");
     }
 
     @Test
@@ -82,7 +95,11 @@ public class PawnTest {
         MoveVerdict verdict = whitePawn.canMove(board, whiteStart, end);
 
         // Assert
-        assertEquals(MoveVerdict.INVALID, verdict, "La captura al paso tras un avance de 1 casilla deberia devolver MoveVerdict.INVALID");
+        assertEquals(
+                MoveVerdict.INVALID,
+                verdict,
+                "La captura al paso tras un avance de 1 casilla deberia devolver"
+                        + " MoveVerdict.INVALID");
     }
 
     // ---------- Promocion ----------
@@ -100,7 +117,10 @@ public class PawnTest {
         MoveVerdict verdict = pawn.canMove(board, start, end);
 
         // Assert
-        assertEquals(MoveVerdict.PROMOTION, verdict, "Un peon que llega a la ultima fila deberia devolver MoveVerdict.PROMOTION");
+        assertEquals(
+                MoveVerdict.PROMOTION,
+                verdict,
+                "Un peon que llega a la ultima fila deberia devolver MoveVerdict.PROMOTION");
     }
 
     @Test
@@ -116,7 +136,13 @@ public class PawnTest {
         PlayResult result = board.tryMove(start, end);
 
         // Assert
-        assertEquals(PlayResult.PROMOTION_PENDING, result, "Un peon que llega a la ultima fila deberia devolver PlayResult.PROMOTION_PENDING");
-        assertSame(pawn, board.getPiece(end), "El peon deberia quedar en la ultima fila esperando la eleccion de la pieza");
+        assertEquals(
+                PlayResult.PROMOTION_PENDING,
+                result,
+                "Un peon que llega a la ultima fila deberia devolver PlayResult.PROMOTION_PENDING");
+        assertSame(
+                pawn,
+                board.getPiece(end),
+                "El peon deberia quedar en la ultima fila esperando la eleccion de la pieza");
     }
 }

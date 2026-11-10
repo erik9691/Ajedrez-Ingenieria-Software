@@ -1,10 +1,9 @@
 package main.core.game.pieces;
 
 import main.core.flags.MoveVerdict;
-import main.core.models.Position;
 import main.core.game.Board;
 import main.core.game.Piece;
-
+import main.core.models.Position;
 
 public class Rook extends Piece {
 
@@ -17,6 +16,8 @@ public class Rook extends Piece {
 
     @Override
     public MoveVerdict canMove(Board board, Position start, Position end) {
+        if (!Board.isValidPosition(start) || !Board.isValidPosition(end) || start.equals(end))
+            return MoveVerdict.INVALID;
         // Tiene que moverse horizontal o vertical, no en diagonal
         if (start.row() != end.row() && start.column() != end.column()) {
             return MoveVerdict.INVALID;
@@ -25,7 +26,7 @@ public class Rook extends Piece {
         if (board.isPathClear(start, end)) {
             return MoveVerdict.VALID;
         }
-        
+
         return MoveVerdict.INVALID;
     }
 

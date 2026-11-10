@@ -1,223 +1,91 @@
 package main.adapters.driven.input;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-
 import main.core.flags.PromotionId;
-import main.core.models.Move;
-import main.core.models.Position;
+import main.core.models.*;
 import main.core.time.PlayerClock;
-import main.ports.dto.BoardView;
-import main.ports.dto.InputResult;
-import main.ports.dto.PieceView;
-import main.ports.dto.PlayerStatus;
+import main.ports.dto.*;
 import main.ports.out.PlayerInputPort;
 
-//IA que delega en el motor Stockfish 11 por protocolo UCI (stdin/stdout).
-public class StockfishElevenAI implements PlayerInputPort {
-    
-    private static final long MOVE_TIME_MS = 500;
-    private static final long TURN_TIME_MS = 5_000; // cada turno descuenta 5 segundos fijos
+import java.io.IOException;
 
-    private String enginePath;
-    private final boolean playsWhite;
+public class StockfishElevenAI implements PlayerInputPort {
+    private EngineConnection engine;
     private final RandomMovesAI fallback = new RandomMovesAI();
     private PlayerClock clock;
-
-    private PrintWriter engineIn;
-    private BufferedReader engineOut;
-
-    // FEN enviado en la jugada anterior: si se repite, la jugada fue rechazada
-    private String lastFen = "";
-    private int repeatCount = 0;
-    private char pendingPromotion = '\0';
+    private PromotionId promotion = PromotionId.QUEEN;
 
     public StockfishElevenAI(boolean playsWhite, String path) {
-        this.playsWhite = playsWhite;
-        this.enginePath = path;
-        startEngine();
+        try {
+            engine = new UciEngine(path);
+        } catch (IOException e) {
+            System.err.println(
+                    "Stockfish no disponible; se usara la IA aleatoria: " + e.getMessage());
+        }
+    }
+
+    public StockfishElevenAI(boolean playsWhite, EngineConnection engine) {
+        this.engine = engine;
     }
 
     @Override
     public void setClock(PlayerClock clock) {
         this.clock = clock;
+        fallback.setClock(clock);
     }
 
     @Override
     public InputResult requestMove(BoardView board) {
-        if (clock != null) {
-            if (clock.isExpired()) {
-                return new InputResult(null, PlayerStatus.TIME_OVER);
-            }
-            clock.reduceTime(TURN_TIME_MS);
+        promotion = PromotionId.QUEEN;
+        if (clock != null && clock.isExpired())
+            return new InputResult(null, PlayerStatus.TIME_OVER);
+        if (board.legalMoves().isEmpty()) return new InputResult(null, PlayerStatus.FORFEIT);
+        if (engine == null) return fallback.requestMove(board);
+        try {
+            String response =
+                    engine.request(
+                            "position fen " + FenEncoder.encode(board) + "\ngo movetime 500",
+                            "bestmove ",
+                            3000);
+            if (response == null || !response.startsWith("bestmove "))
+                return fallback.requestMove(board);
+            String text = response.substring(9).trim().split("\\s+")[0];
+            if (!text.matches("[a-h][1-8][a-h][1-8][qrbn]?")) return fallback.requestMove(board);
+            Move move = new Move(square(text.substring(0, 2)), square(text.substring(2, 4)));
+            if (!board.legalMoves().contains(move)) return fallback.requestMove(board);
+            boolean promotes =
+                    board.pieceAt(move.start().row(), move.start().column()).symbol() == 'P'
+                            && (move.end().row() == 0 || move.end().row() == 7);
+            if (promotes != (text.length() == 5)) return fallback.requestMove(board);
+            if (promotes)
+                promotion =
+                        switch (text.charAt(4)) {
+                            case 'r' -> PromotionId.ROOK;
+                            case 'b' -> PromotionId.BISHOP;
+                            case 'n' -> PromotionId.KNIGHT;
+                            default -> PromotionId.QUEEN;
+                        };
+            return new InputResult(move, PlayerStatus.OK);
+        } catch (IOException e) {
+            engine.close();
+            engine = null;
+            return fallback.requestMove(board);
         }
+    }
 
-        String canonicalFen = toFen(board, true);
-        String fenToSend;
-
-        // El GameManager rechazó la jugada anterior: se vuelve a pedir la misma posición
-        if (canonicalFen.equals(lastFen)) {
-            repeatCount++;
-            if (repeatCount >= 2) {
-                return randomFallbackMove(board);
-            }
-            // El enroque heurístico es lo único del FEN que puede mentir; sin
-            // derechos el motor solo propone jugadas legales en la partida real
-            fenToSend = toFen(board, false);
-        } else {
-            repeatCount = 0;
-            fenToSend = canonicalFen;
-        }
-        lastFen = canonicalFen;
-
-        engineIn.println("position fen " + fenToSend);
-        engineIn.println("go movetime " + MOVE_TIME_MS);
-
-        String bestmove = readBestMove();
-        if (bestmove == null) {
-            return randomFallbackMove(board);
-        }
-        // e7e8q: la pieza de promoción queda cacheada para requestPromotion
-        pendingPromotion = bestmove.length() == 5 ? bestmove.charAt(4) : '\0';
-        return new InputResult(
-            new Move(squareToPosition(bestmove.substring(0, 2)), squareToPosition(bestmove.substring(2, 4))),
-            PlayerStatus.OK
-        );
+    private static Position square(String s) {
+        return new Position('8' - s.charAt(1), s.charAt(0) - 'a');
     }
 
     @Override
     public PromotionId requestPromotion(BoardView board) {
-        return switch (pendingPromotion) {
-            case 'r' -> PromotionId.ROOK;
-            case 'b' -> PromotionId.BISHOP;
-            case 'n' -> PromotionId.KNIGHT;
-            default -> PromotionId.QUEEN;
-        };
+        return promotion;
     }
 
-    private InputResult randomFallbackMove(BoardView board) {
-        pendingPromotion = '\0';
-        System.out.println("FAIL-STOCKFISH");
-        return fallback.requestMove(board);
-    }
-
-    private void startEngine() {
-        try {
-            Process process = new ProcessBuilder(enginePath)
-                .redirectError(ProcessBuilder.Redirect.DISCARD)
-                .start();
-            engineIn = new PrintWriter(
-                new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8),
-                true
-            );
-            engineOut = new BufferedReader(
-                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
-            );
-        } catch (IOException e) {
-            throw new IllegalStateException("No se pudo iniciar el motor Stockfish en " + enginePath, e);
+    @Override
+    public void close() {
+        if (engine != null) {
+            engine.close();
+            engine = null;
         }
-        engineIn.println("uci");
-        if (!readUntil("uciok")) {
-            throw new IllegalStateException("El motor Stockfish no respondió al handshake uci");
-        }
-        engineIn.println("isready");
-        if (!readUntil("readyok")) {
-            throw new IllegalStateException("El motor Stockfish no respondió a isready");
-        }
-    }
-
-    private boolean readUntil(String expected) {
-        try {
-            String line;
-            while ((line = engineOut.readLine()) != null) {
-                if (line.equals(expected)) {
-                    return true;
-                }
-            }
-        } catch (IOException e) {
-            return false;
-        }
-        return false;
-    }
-
-    private String readBestMove() {
-        try {
-            String line;
-            while ((line = engineOut.readLine()) != null) {
-                if (line.startsWith("bestmove ")) {
-                    String move = line.substring("bestmove ".length()).trim();
-                    int space = move.indexOf(' ');
-                    if (space >= 0) {
-                        move = move.substring(0, space);
-                    }
-                    return move.equals("(none)") ? null : move;
-                }
-            }
-        } catch (IOException e) {
-            return null;
-        }
-        return null;
-    }
-
-    // FEN sin historial: sin en passant el motor nunca lo captura, y sus jugadas
-    // siguen siendo un subconjunto de las legales de la partida real
-    private String toFen(BoardView board, boolean withCastlingRights) {
-        StringBuilder fen = new StringBuilder();
-        for (int row = 0; row < BoardView.SIZE; row++) {
-            int empty = 0;
-            for (int column = 0; column < BoardView.SIZE; column++) {
-                PieceView piece = board.pieceAt(row, column);
-                if (piece == null) {
-                    empty++;
-                } else {
-                    if (empty > 0) {
-                        fen.append(empty);
-                        empty = 0;
-                    }
-                    char letter = piece.symbol();
-                    fen.append(piece.isWhite() ? letter : Character.toLowerCase(letter));
-                }
-            }
-            if (empty > 0) {
-                fen.append(empty);
-            }
-            if (row < BoardView.SIZE - 1) {
-                fen.append('/');
-            }
-        }
-        fen.append(playsWhite ? " w " : " b ");
-        fen.append(withCastlingRights ? castlingRights(board) : "-");
-        fen.append(" - 0 1");
-        return fen.toString();
-    }
-
-    // Deduce derechos por las casillas de origen: si el rey o la torre se movieron
-    // y volvieron, el enroque se rechaza y el reintento usa el FEN sin derechos
-    private String castlingRights(BoardView board) {
-        StringBuilder rights = new StringBuilder();
-        if (isPiece(board, 7, 4, 'K', true)) {
-            if (isPiece(board, 7, 7, 'R', true)) rights.append('K');
-            if (isPiece(board, 7, 0, 'R', true)) rights.append('Q');
-        }
-        if (isPiece(board, 0, 4, 'K', false)) {
-            if (isPiece(board, 0, 7, 'R', false)) rights.append('k');
-            if (isPiece(board, 0, 0, 'R', false)) rights.append('q');
-        }
-        return rights.length() == 0 ? "-" : rights.toString();
-    }
-
-    private boolean isPiece(BoardView board, int row, int column, char symbol, boolean isWhite) {
-        PieceView piece = board.pieceAt(row, column);
-        return piece != null && piece.symbol() == symbol && piece.isWhite() == isWhite;
-    }
-
-    private Position squareToPosition(String square) {
-        int column = square.charAt(0) - 'a';
-        int row = '8' - square.charAt(1);
-        return new Position(row, column);
     }
 }

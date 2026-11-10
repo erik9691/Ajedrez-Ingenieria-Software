@@ -1,10 +1,13 @@
 package main.ports.out;
+
 import main.core.flags.PlayResult;
 import main.ports.dto.BoardView;
 import main.ports.dto.ClockView;
 
+public interface DisplayPort extends AutoCloseable {
+    @Override
+    default void close() {}
 
-public interface DisplayPort {
     void displayGameStart();
 
     // Dibuja el estado actual del tablero y los relojes (vista de solo lectura).

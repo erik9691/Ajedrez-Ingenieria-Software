@@ -21,12 +21,21 @@ public enum PlayResult {
 
     // true si la jugada fue aceptada, false si fue rechazada.
     public boolean isLegal() {
-        return this == LEGAL || this == PROMOTION_PENDING || this == CHECK || this == CHECKMATE || this == DRAW || this == STALEMATE;
+        return this == LEGAL
+                || this == PROMOTION_PENDING
+                || this == CHECK
+                || this == CHECKMATE
+                || this == DRAW
+                || this == STALEMATE;
     }
 
-    
-    //resultados que terminan la partida: jaquemate, rey ahogado, abandono/rendicion, empate general.
+    // resultados que terminan la partida: jaquemate, rey ahogado, abandono/rendicion, empate
+    // general.
     public boolean isFinal() {
-        return this == CHECKMATE || this == STALEMATE || this == FORFEIT || this == TIME_OVER || this == DRAW;
+        return this == CHECKMATE
+                || this == STALEMATE
+                || this == FORFEIT
+                || this == TIME_OVER
+                || this == DRAW;
     }
 }

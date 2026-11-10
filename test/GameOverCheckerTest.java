@@ -1,4 +1,3 @@
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 import main.core.game.Board;
@@ -12,9 +11,11 @@ import main.core.game.pieces.Queen;
 import main.core.game.pieces.Rook;
 import main.core.models.Position;
 
+import org.junit.jupiter.api.Test;
+
 public class GameOverCheckerTest {
 
-    // Jaque mate 
+    // Jaque mate
 
     @Test
     public void isCheckMate_backRankMate_shouldBeTrue() {
@@ -32,7 +33,9 @@ public class GameOverCheckerTest {
         boolean checkMate = checker.isCheckMate(false);
 
         // Assert
-        assertTrue(checkMate, "Un rey en jaque sin escape, captura ni bloqueo deberia estar en jaque mate");
+        assertTrue(
+                checkMate,
+                "Un rey en jaque sin escape, captura ni bloqueo deberia estar en jaque mate");
     }
 
     @Test
@@ -42,7 +45,8 @@ public class GameOverCheckerTest {
         Board board = new Board(history);
         GameOverChecker checker = new GameOverChecker(board, history);
         board.setPiece(new Position(0, 7), new King(false));
-        board.setPiece(new Position(1, 6), new Pawn(false)); // Sin peon en (1,7): el rey puede escapar
+        board.setPiece(
+                new Position(1, 6), new Pawn(false)); // Sin peon en (1,7): el rey puede escapar
         board.setPiece(new Position(0, 0), new Rook(true));
         board.setPiece(new Position(7, 4), new King(true));
 
@@ -69,7 +73,7 @@ public class GameOverCheckerTest {
         assertFalse(checkMate, "Un rey que no esta en jaque no puede estar en jaque mate");
     }
 
-    // Ahogado 
+    // Ahogado
 
     @Test
     public void isStalemate_noLegalMovesAndNotInCheck_shouldBeTrue() {
@@ -79,7 +83,9 @@ public class GameOverCheckerTest {
         GameOverChecker checker = new GameOverChecker(board, history);
         board.setPiece(new Position(0, 0), new King(false));
         board.setPiece(new Position(2, 1), new King(true));
-        board.setPiece(new Position(1, 2), new Queen(true)); // No da jaque pero cubre todas las casillas del rey negro
+        board.setPiece(
+                new Position(1, 2),
+                new Queen(true)); // No da jaque pero cubre todas las casillas del rey negro
 
         // Act
         boolean stalemate = checker.isStalemate(false);
@@ -116,7 +122,8 @@ public class GameOverCheckerTest {
         GameOverChecker checker = new GameOverChecker(board, history);
         board.setPiece(new Position(0, 0), new King(false));
         board.setPiece(new Position(2, 1), new King(true));
-        board.setPiece(new Position(7, 7), new Queen(true)); // Lejos: el rey negro tiene casillas libres
+        board.setPiece(
+                new Position(7, 7), new Queen(true)); // Lejos: el rey negro tiene casillas libres
 
         // Act
         boolean stalemate = checker.isStalemate(false);
@@ -125,7 +132,7 @@ public class GameOverCheckerTest {
         assertFalse(stalemate, "Un jugador con jugadas legales no esta ahogado");
     }
 
-    // Tablas: material insuficiente 
+    // Tablas: material insuficiente
 
     @Test
     public void isDraw_kingVsKing_shouldBeTrue() {
@@ -174,7 +181,8 @@ public class GameOverCheckerTest {
         boolean insufficient = checker.isInsufficientMaterial();
 
         // Assert
-        assertFalse(insufficient, "Rey y torre contra rey es material suficiente para dar jaque mate");
+        assertFalse(
+                insufficient, "Rey y torre contra rey es material suficiente para dar jaque mate");
     }
 
     @Test
@@ -185,17 +193,20 @@ public class GameOverCheckerTest {
         GameOverChecker checker = new GameOverChecker(board, history);
         board.setPiece(new Position(7, 4), new King(true));
         board.setPiece(new Position(0, 4), new King(false));
-        board.setPiece(new Position(4, 4), new Bishop(true));  // (4+4) par -> casilla clara
+        board.setPiece(new Position(4, 4), new Bishop(true)); // (4+4) par -> casilla clara
         board.setPiece(new Position(1, 1), new Bishop(false)); // (1+1) par -> casilla clara
 
         // Act
         boolean insufficient = checker.isInsufficientMaterial();
 
         // Assert
-        assertTrue(insufficient, "Alfiles de bandos opuestos en casillas del mismo color no pueden forzar jaque mate");
+        assertTrue(
+                insufficient,
+                "Alfiles de bandos opuestos en casillas del mismo color no pueden forzar jaque"
+                        + " mate");
     }
 
-    //  Tablas: regla de los 50 movimientos 
+    //  Tablas: regla de los 50 movimientos
 
     @Test
     public void isDraw_fiftyMovesWithoutProgress_shouldBeTrue() {
@@ -214,7 +225,9 @@ public class GameOverCheckerTest {
         }
 
         // Assert
-        assertTrue(checker.isDraw(), "100 medias jugadas sin captura ni movimiento de peon deberian ser tablas");
+        assertTrue(
+                checker.isDraw(),
+                "100 medias jugadas sin captura ni movimiento de peon deberian ser tablas");
     }
 
     @Test
@@ -233,7 +246,8 @@ public class GameOverCheckerTest {
         }
 
         // Assert
-        assertFalse(checker.isDraw(), "99 medias jugadas sin progreso todavia no deberian ser tablas");
+        assertFalse(
+                checker.isDraw(), "99 medias jugadas sin progreso todavia no deberian ser tablas");
     }
 
     @Test
@@ -254,6 +268,8 @@ public class GameOverCheckerTest {
         checker.incrementHalfmoveClock();
 
         // Assert
-        assertFalse(checker.isDraw(), "Reiniciar el contador deberia reiniciar la cuenta de los 50 movimientos");
+        assertFalse(
+                checker.isDraw(),
+                "Reiniciar el contador deberia reiniciar la cuenta de los 50 movimientos");
     }
 }

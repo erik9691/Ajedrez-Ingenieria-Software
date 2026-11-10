@@ -1,7 +1,5 @@
 package main.adapters.driven.input;
 
-import java.util.Scanner;
-
 import main.core.flags.PromotionId;
 import main.core.models.Move;
 import main.core.models.Position;
@@ -11,8 +9,19 @@ import main.ports.dto.InputResult;
 import main.ports.dto.PlayerStatus;
 import main.ports.out.PlayerInputPort;
 
+import java.util.Scanner;
+
 public class ConsoleInputAdapter implements PlayerInputPort {
-    private final Scanner scanner = ConsoleScanner.getInstance();
+    private final Scanner scanner;
+
+    public ConsoleInputAdapter() {
+        this(ConsoleScanner.getInstance());
+    }
+
+    public ConsoleInputAdapter(Scanner scanner) {
+        this.scanner = java.util.Objects.requireNonNull(scanner);
+    }
+
     private PlayerClock clock;
 
     @Override
@@ -20,57 +29,49 @@ public class ConsoleInputAdapter implements PlayerInputPort {
         this.clock = clock;
     }
 
-    // El reloj corre mientras el jugador piensa. El scanner bloquea, así que el
-    // vencimiento se detecta entre lecturas; el finally frena el reloj en cualquier salida.
+    // El servicio controla el reloj y limita la espera de lectura.
     @Override
     public InputResult requestMove(BoardView board) {
-        resumeClock();
-        try {
-            while (true) {
-                if (clockExpired()) {
-                    return new InputResult(null, PlayerStatus.TIME_OVER);
-                }
-
-                System.out.print("Origen: ");
-                if (!scanner.hasNextLine()) {
-                    return new InputResult(null, PlayerStatus.FORFEIT); // se cerró la entrada
-                }
-                String origin = scanner.nextLine();
-                if (isForfeit(origin)) {
-                    return new InputResult(null, PlayerStatus.FORFEIT);
-                }
-                if (clockExpired()) {
-                    return new InputResult(null, PlayerStatus.TIME_OVER);
-                }
-
-                System.out.print("Destino: ");
-                if (!scanner.hasNextLine()) {
-                    return new InputResult(null, PlayerStatus.FORFEIT);
-                }
-                String destination = scanner.nextLine();
-                if (isForfeit(destination)) {
-                    return new InputResult(null, PlayerStatus.FORFEIT);
-                }
-                if (clockExpired()) {
-                    return new InputResult(null, PlayerStatus.TIME_OVER);
-                }
-
-                try {
-                    return new InputResult(
-                        new Move(parseSquare(origin), parseSquare(destination)),
-                        PlayerStatus.OK
-                    );
-                } catch (IllegalArgumentException e) {
-                    // Error de sintaxis de la consola: el main.core nunca llega a verlo
-                    System.out.println("Error: " + e.getMessage());
-                }
+        while (true) {
+            if (clockExpired()) {
+                return new InputResult(null, PlayerStatus.TIME_OVER);
             }
-        } finally {
-            pauseClock();
+
+            System.out.print("Origen: ");
+            if (!scanner.hasNextLine()) {
+                return new InputResult(null, PlayerStatus.FORFEIT); // se cerró la entrada
+            }
+            String origin = scanner.nextLine();
+            if (isForfeit(origin)) {
+                return new InputResult(null, PlayerStatus.FORFEIT);
+            }
+            if (clockExpired()) {
+                return new InputResult(null, PlayerStatus.TIME_OVER);
+            }
+
+            System.out.print("Destino: ");
+            if (!scanner.hasNextLine()) {
+                return new InputResult(null, PlayerStatus.FORFEIT);
+            }
+            String destination = scanner.nextLine();
+            if (isForfeit(destination)) {
+                return new InputResult(null, PlayerStatus.FORFEIT);
+            }
+            if (clockExpired()) {
+                return new InputResult(null, PlayerStatus.TIME_OVER);
+            }
+
+            try {
+                return new InputResult(
+                        new Move(parseSquare(origin), parseSquare(destination)), PlayerStatus.OK);
+            } catch (IllegalArgumentException e) {
+                // Error de sintaxis de la consola: el main.core nunca llega a verlo
+                System.out.println("Error: " + e.getMessage());
+            }
         }
     }
 
-    // La promoción no consume tiempo de reloj ni acepta rendición (por ahora).
+    // El servicio mide tambien el tiempo de la eleccion de promocion.
     @Override
     public PromotionId requestPromotion(BoardView board) {
         while (true) {
@@ -78,9 +79,10 @@ public class ConsoleInputAdapter implements PlayerInputPort {
             if (!scanner.hasNextLine()) {
                 return null;
             }
-            String choice = scanner.nextLine();
+            String choice = scanner.nextLine().trim();
+            if (isForfeit(choice)) return null;
 
-            if (choice.isEmpty()) {
+            if (choice.length() != 1) {
                 continue;
             }
 
@@ -98,18 +100,6 @@ public class ConsoleInputAdapter implements PlayerInputPort {
         return clock != null && clock.isExpired();
     }
 
-    private void resumeClock() {
-        if (clock != null) {
-            clock.resume();
-        }
-    }
-
-    private void pauseClock() {
-        if (clock != null) {
-            clock.pause();
-        }
-    }
-
     // "CHAU" en origen o destino: el jugador se rinde.
     private boolean isForfeit(String input) {
         return "CHAU".equalsIgnoreCase(input.trim());
@@ -120,7 +110,8 @@ public class ConsoleInputAdapter implements PlayerInputPort {
     private Position parseSquare(String notation) {
         String text = notation == null ? "" : notation.trim().toLowerCase();
         if (!text.matches("[a-h][1-8]")) {
-            throw new IllegalArgumentException("Posición inválida: \"" + notation + "\". Usá el formato a1-h8.");
+            throw new IllegalArgumentException(
+                    "Posición inválida: \"" + notation + "\". Usá el formato a1-h8.");
         }
         int column = text.charAt(0) - 'a';
         int row = 8 - (text.charAt(1) - '0');

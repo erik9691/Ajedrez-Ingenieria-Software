@@ -1,9 +1,9 @@
 package main.core.game.pieces;
 
 import main.core.flags.MoveVerdict;
-import main.core.models.Position;
 import main.core.game.Board;
 import main.core.game.Piece;
+import main.core.models.Position;
 
 public class King extends Piece {
 
@@ -28,11 +28,13 @@ public class King extends Piece {
 
     @Override
     public MoveVerdict canMove(Board board, Position start, Position end) {
+        if (!Board.isValidPosition(start) || !Board.isValidPosition(end) || start.equals(end))
+            return MoveVerdict.INVALID;
         int rowDifference = Math.abs(end.row() - start.row());
         int columnDifference = Math.abs(end.column() - start.column());
 
         // Movimiento normal: 1 casilla en cualquier dirección
-        if (rowDifference <= 1 && columnDifference <= 1) {
+        if (rowDifference <= 1 && columnDifference <= 1 && rowDifference + columnDifference > 0) {
             return MoveVerdict.VALID;
         }
 
@@ -46,10 +48,10 @@ public class King extends Piece {
 
     private boolean canCastle(Board board, Position start, Position end) {
         // 1. El rey no se movió nunca
-        if (hasMoved) {
+        if (hasMoved || start.column() != 4 || start.row() != (isWhite ? 7 : 0)) {
             return false;
         }
-        
+
         // 2. Ubicar la torre según el lado del enroque
         int direction = end.column() > start.column() ? 1 : -1;
         int rookColumn = direction == 1 ? KINGSIDE_ROOK_COLUMN : QUEENSIDE_ROOK_COLUMN;

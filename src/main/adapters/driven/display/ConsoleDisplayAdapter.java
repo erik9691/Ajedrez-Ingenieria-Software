@@ -1,15 +1,15 @@
 package main.adapters.driven.display;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-
 import main.core.flags.PlayResult;
 import main.ports.dto.BoardView;
 import main.ports.dto.ClockView;
 import main.ports.dto.PieceView;
 import main.ports.out.DisplayPort;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 // Muestra el tablero en una consola aparte: al empezar la partida lanza una
 // terminal nueva que lee un archivo y redibuja la pantalla cada vez que cambia.
@@ -22,35 +22,48 @@ public class ConsoleDisplayAdapter implements DisplayPort {
     // Terminales soportadas, en orden de preferencia. Cada entrada es el binario
     // y sus flags; al final se agregan "sh", "-c" y el loop de display.
     private static final String[][] TERMINALS = {
-            { "xterm", "-title", "Tablero de ajedrez", "-e" },
-            { "konsole", "-e" },
-            { "xfce4-terminal", "-e" },
-            { "kitty" },
-            { "alacritty", "-e" },
-            { "gnome-terminal", "--" },
+        {"xterm", "-title", "Tablero de ajedrez", "-e"},
+        {"konsole", "-e"},
+        {"xfce4-terminal", "-e"},
+        {"kitty"},
+        {"alacritty", "-e"},
+        {"gnome-terminal", "--"},
     };
 
-    private final Path boardFile = Path.of(System.getProperty("java.io.tmpdir"), "ajedrez-board-" + ProcessHandle.current().pid() + ".txt");
+    private final Path boardFile =
+            Path.of(
+                    System.getProperty("java.io.tmpdir"),
+                    "ajedrez-board-" + java.util.UUID.randomUUID() + ".txt");
     private Process boardWindow;
     private boolean windowOpen;
+    private final boolean separateWindow;
+    private final Thread shutdownHook = new Thread(this::closeBoardWindow);
 
     public ConsoleDisplayAdapter() {
-        Runtime.getRuntime().addShutdownHook(new Thread(this::closeBoardWindow));
+        this(true);
+    }
+
+    public ConsoleDisplayAdapter(boolean separateWindow) {
+        this.separateWindow = separateWindow;
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
 
     @Override
     public void displayGameStart() {
         System.out.println("¡Comienza la partida! (Escribir CHAU para rendirse)");
-        writeBoardFile("Preparando tablero...");
         openBoardWindow();
     }
 
     @Override
     public void displayBoard(BoardView board, ClockView clock) {
         String content = renderBoard(board, clock);
+        if (windowOpen && (boardWindow == null || !boardWindow.isAlive())) closeBoardWindow();
         if (windowOpen) {
             String fileContent = clock == null ? content : clockMetadata(clock) + "\n" + content;
-            writeBoardFile(fileContent);
+            if (!writeBoardFile(fileContent)) {
+                closeBoardWindow();
+                System.out.println(content);
+            }
         } else {
             System.out.println(content);
         }
@@ -58,24 +71,25 @@ public class ConsoleDisplayAdapter implements DisplayPort {
 
     @Override
     public void displayMessage(PlayResult flag) {
-        System.out.println(switch (flag) {
-            case LEGAL -> "";
-            case ILLEGAL -> "La pieza no puede moverse a esa casilla.";
-            case NO_PIECE -> "No hay ninguna pieza en la casilla de origen.";
-            case OUT_OF_BOUNDS -> "Posición fuera del tablero.";
-            case OWN_PIECE_CAPTURE -> "No podés capturar tu propia pieza.";
-            case PROMOTION_PENDING -> "Promoción pendiente: elegí la pieza (Q/R/B/N).";
-            case SELF_MATE -> "Ese movimiento te dejaría en jaque.";
-            case CHECK -> "¡Jaque!";
-            case CHECKMATE -> "¡Fin del juego! Jaque mate.";
-            case NOT_YOUR_TURN -> "No es el turno de esa pieza.";
-            case INVALID_PROMOTION -> "Elección de promoción inválida. Usá Q, R, B o N.";
-            case DRAW -> "Empate.";
-            case STALEMATE -> "Tablas por ahogado.";
-            case FORFEIT -> "El jugador abandonó la partida.";
-            case TIME_OVER -> "El jugador se quedó sin tiempo!.";
-            case NONE -> "";
-        });
+        System.out.println(
+                switch (flag) {
+                    case LEGAL -> "";
+                    case ILLEGAL -> "La pieza no puede moverse a esa casilla.";
+                    case NO_PIECE -> "No hay ninguna pieza en la casilla de origen.";
+                    case OUT_OF_BOUNDS -> "Posición fuera del tablero.";
+                    case OWN_PIECE_CAPTURE -> "No podés capturar tu propia pieza.";
+                    case PROMOTION_PENDING -> "Promoción pendiente: elegí la pieza (Q/R/B/N).";
+                    case SELF_MATE -> "Ese movimiento te dejaría en jaque.";
+                    case CHECK -> "¡Jaque!";
+                    case CHECKMATE -> "¡Fin del juego! Jaque mate.";
+                    case NOT_YOUR_TURN -> "No es el turno de esa pieza.";
+                    case INVALID_PROMOTION -> "Elección de promoción inválida. Usá Q, R, B o N.";
+                    case DRAW -> "Empate.";
+                    case STALEMATE -> "Tablas por ahogado.";
+                    case FORFEIT -> "El jugador abandonó la partida.";
+                    case TIME_OVER -> "El jugador se quedó sin tiempo!.";
+                    case NONE -> "";
+                });
     }
 
     @Override
@@ -101,18 +115,21 @@ public class ConsoleDisplayAdapter implements DisplayPort {
             System.out.println("¡Fin del juego! Empate.");
             return;
         }
-        System.out.println("¡Fin del juego! Ganan las " + (isWhiteWinner ? "blancas" : "negras") + ".");
+        System.out.println(
+                "¡Fin del juego! Ganan las " + (isWhiteWinner ? "blancas" : "negras") + ".");
     }
 
     // ---- Ventana del tablero ----
 
     private void openBoardWindow() {
+        if (!separateWindow) return;
         if (System.getenv("DISPLAY") == null && System.getenv("WAYLAND_DISPLAY") == null) {
             System.out.println("(Sin entorno gráfico: el tablero se imprime en esta consola.)");
             return;
         }
 
-        String loop = buildDisplayLoop();
+        if (!writeBoardFile("Preparando tablero...")) return;
+        String loop = BoardWindowScript.build(boardFile);
 
         for (String[] terminal : TERMINALS) {
             String[] command = new String[terminal.length + 3];
@@ -128,60 +145,67 @@ public class ConsoleDisplayAdapter implements DisplayPort {
                 // Probar con la siguiente terminal de la lista.
             }
         }
-        System.out.println("(No se encontró una terminal para el tablero: se imprime en esta consola.)");
+        System.out.println(
+                "(No se encontró una terminal para el tablero: se imprime en esta consola.)");
     }
 
     // Loop de la ventana: redibuja cuando el archivo cambia y, si hay snapshot
     // de reloj, cuenta hacia abajo al jugador activo una vez por segundo.
-    // El mtime del archivo marca el momento del snapshot.
-    private String buildDisplayLoop() {
-        return "f=\"" + boardFile + "\"; m=\"\"; shown=\"\"; while true; do "
-                + "m2=$(stat -c %Y \"$f\" 2>/dev/null); "
-                + "if [ \"$m2\" != \"$m\" ]; then m=\"$m2\"; meta=$(sed -n 's/^#CLOCK //p' \"$f\" | head -1); fi; "
-                + "if [ -z \"$meta\" ]; then "
-                + "if [ \"$m2\" != \"$shown\" ]; then clear; cat \"$f\"; shown=\"$m2\"; fi; "
-                + "else "
-                + "now=$(date +%s); set -- $meta; wrem=$2; brem=$4; "
-                + "if [ \"$6\" = \"W\" ]; then wrem=$(( wrem - (now - m2) * 1000 )); else brem=$(( brem - (now - m2) * 1000 )); fi; "
-                + "[ \"$wrem\" -lt 0 ] && wrem=0; [ \"$brem\" -lt 0 ] && brem=0; "
-                + "ws=$(( wrem / 1000 )); bs=$(( brem / 1000 )); "
-                + "clockline=$(printf \"Blancas: %02d:%02d  Negras: %02d:%02d\" $(( ws / 60 )) $(( ws % 60 )) $(( bs / 60 )) $(( bs % 60 ))); "
-                + "body=$(sed -e '/^#CLOCK/d' -e \"1s/.*/$clockline/\" \"$f\"); "
-                + "if [ \"$body\" != \"$shown\" ]; then clear; printf '%s\\n' \"$body\"; shown=\"$body\"; fi; "
-                + "fi; sleep 0.2; done";
+    // Cada cambio de contenido reinicia el instante de referencia del reloj.
+    @Override
+    public void close() {
+        closeBoardWindow();
+        try {
+            Runtime.getRuntime().removeShutdownHook(shutdownHook);
+        } catch (IllegalStateException ignored) {
+            /* La JVM ya esta cerrandose. */
+        }
     }
 
-    private void closeBoardWindow() {
+    private synchronized void closeBoardWindow() {
         if (boardWindow != null) {
             boardWindow.destroy();
             boardWindow = null;
         }
         windowOpen = false;
+        try {
+            Files.deleteIfExists(boardFile);
+            Files.deleteIfExists(boardFile.resolveSibling(boardFile.getFileName() + ".tmp"));
+        } catch (IOException ignored) {
+        }
     }
 
     // Escribe vía archivo temporal + rename para que el loop nunca lea un archivo a medio escribir.
-    private void writeBoardFile(String content) {
+    private boolean writeBoardFile(String content) {
         try {
             Path tmp = boardFile.resolveSibling(boardFile.getFileName() + ".tmp");
             Files.writeString(tmp, content);
             Files.move(tmp, boardFile, StandardCopyOption.REPLACE_EXISTING);
+            return true;
         } catch (IOException e) {
             System.out.println("No se pudo actualizar la ventana del tablero: " + e.getMessage());
+            return false;
         }
     }
 
     // Línea oculta con el snapshot; el loop la usa para el countdown y la filtra al mostrar.
     private String clockMetadata(ClockView clock) {
-        return "#CLOCK W " + clock.whiteMillis()
-                + " B " + clock.blackMillis()
-                + " A " + (clock.whiteTurn() ? "W" : "B");
+        return "#CLOCK W "
+                + clock.whiteMillis()
+                + " B "
+                + clock.blackMillis()
+                + " A "
+                + (clock.whiteTurn() ? "W" : "B");
     }
 
     private String renderBoard(BoardView board, ClockView clock) {
         StringBuilder content = new StringBuilder();
         if (clock != null) {
-            content.append("Blancas: ").append(formatClock(clock.whiteMillis()))
-                    .append("  Negras: ").append(formatClock(clock.blackMillis())).append('\n');
+            content.append("Blancas: ")
+                    .append(formatClock(clock.whiteMillis()))
+                    .append("  Negras: ")
+                    .append(formatClock(clock.blackMillis()))
+                    .append('\n');
         }
         content.append('\n');
         content.append("    a b c d e f g h\n");
@@ -209,6 +233,8 @@ public class ConsoleDisplayAdapter implements DisplayPort {
         if (piece == null) {
             return '.';
         }
-        return piece.isWhite() ? Character.toUpperCase(piece.symbol()) : Character.toLowerCase(piece.symbol());
+        return piece.isWhite()
+                ? Character.toUpperCase(piece.symbol())
+                : Character.toLowerCase(piece.symbol());
     }
 }

@@ -1,10 +1,9 @@
 package main.core.game.pieces;
 
 import main.core.flags.MoveVerdict;
-import main.core.models.Position;
 import main.core.game.Board;
 import main.core.game.Piece;
-
+import main.core.models.Position;
 
 public class Pawn extends Piece {
 
@@ -14,6 +13,8 @@ public class Pawn extends Piece {
 
     @Override
     public MoveVerdict canMove(Board board, Position start, Position end) {
+        if (!Board.isValidPosition(start) || !Board.isValidPosition(end) || start.equals(end))
+            return MoveVerdict.INVALID;
 
         int direction;
 
@@ -37,7 +38,9 @@ public class Pawn extends Piece {
         }
 
         // Si esta en la posicion inicial, se permite el movimiento de 2 hacia delante
-        if (columnDifference == 0 && start.row() == (isWhite ? 6 : 1) && rowDifference == 2 * direction) {
+        if (columnDifference == 0
+                && start.row() == (isWhite ? 6 : 1)
+                && rowDifference == 2 * direction) {
             Position middle = new Position(start.row() + direction, start.column());
             // Valida que no haya pieza en ninguna de las 2 posiciones por el que se quiere pasar
             if (board.getPiece(middle) != null || board.getPiece(end) != null) {
@@ -45,19 +48,20 @@ public class Pawn extends Piece {
             }
             return MoveVerdict.VALID;
         }
-        
+
         // Para comer en diagonal
         if (columnDifference == 1 && rowDifference == direction) {
             Piece target = board.getPiece(end);
 
             // Verifica si es un movimiento de En Passant o solo es una pieza nula
-            if(target == null) {
+            if (target == null) {
                 Position adjacentPawnPosition = new Position(start.row(), end.column());
                 Piece adjacentPawn = board.getPiece(adjacentPawnPosition);
                 if (adjacentPawn instanceof Pawn && adjacentPawn.getColor() != isWhite) {
-                    
+
                     // Verifica si el peon adyacente se movio 2 casillas en el ultimo turno
-                    if (board.wasTwoTilePawnMoved((Pawn) adjacentPawn)) {
+                    if (start.row() == (isWhite ? 3 : 4)
+                            && board.wasTwoTilePawnMoved((Pawn) adjacentPawn)) {
                         return MoveVerdict.EN_PASSANT;
                     }
                 }

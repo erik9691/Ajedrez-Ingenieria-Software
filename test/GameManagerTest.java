@@ -1,18 +1,19 @@
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import main.core.flags.PlayResult;
+import main.core.flags.PromotionId;
 import main.core.game.Board;
 import main.core.game.GameOverChecker;
 import main.core.game.MoveHistory;
 import main.core.game.pieces.King;
+import main.core.game.pieces.Knight;
 import main.core.game.pieces.Pawn;
 import main.core.game.pieces.Queen;
-import main.core.game.pieces.Rook;
 import main.core.managers.GameManager;
 import main.core.models.Move;
 import main.core.models.Position;
-import main.core.flags.PlayResult;
-import main.core.flags.PromotionId;
+
+import org.junit.jupiter.api.Test;
 
 public class GameManagerTest {
 
@@ -42,12 +43,16 @@ public class GameManagerTest {
         PlayResult result = game.movePiece(new Move(new Position(1, 4), new Position(0, 4)));
 
         // Assert
-        assertEquals(PlayResult.PROMOTION_PENDING, result, "Un peon que llega a la ultima fila deberia devolver PlayResult.PROMOTION_PENDING");
-        assertTrue(game.isPromotionPending(), "El juego deberia estar esperando la eleccion de la pieza de promocion");
+        assertEquals(
+                PlayResult.PROMOTION_PENDING,
+                result,
+                "Un peon que llega a la ultima fila deberia devolver PlayResult.PROMOTION_PENDING");
+        assertTrue(
+                game.isPromotionPending(),
+                "El juego deberia estar esperando la eleccion de la pieza de promocion");
         assertTrue(game.isWhiteTurn(), "El turno no deberia cambiar hasta completar la promocion");
     }
 
-    
     @Test
     public void promotePawn_toQueen_shouldReplacePawnAndChangeTurn() {
         // Arrange
@@ -66,11 +71,20 @@ public class GameManagerTest {
         PlayResult result = game.promotePawn(PromotionId.QUEEN);
 
         // Assert
-        assertEquals(PlayResult.LEGAL, result, "Completar la promocion deberia devolver PlayResult.LEGAL");
-        assertInstanceOf(Queen.class, board.getPiece(promotionSquare), "El peon deberia ser reemplazado por una dama");
-        assertTrue(board.getPiece(promotionSquare).getColor(), "La dama promocionada deberia conservar el color del peon");
+        assertEquals(
+                PlayResult.LEGAL,
+                result,
+                "Completar la promocion deberia devolver PlayResult.LEGAL");
+        assertInstanceOf(
+                Queen.class,
+                board.getPiece(promotionSquare),
+                "El peon deberia ser reemplazado por una dama");
+        assertTrue(
+                board.getPiece(promotionSquare).getColor(),
+                "La dama promocionada deberia conservar el color del peon");
         assertFalse(game.isPromotionPending(), "Ya no deberia haber una promocion pendiente");
-        assertFalse(game.isWhiteTurn(), "El turno deberia pasar a las negras despues de la promocion");
+        assertFalse(
+                game.isWhiteTurn(), "El turno deberia pasar a las negras despues de la promocion");
     }
 
     @Test
@@ -85,10 +99,14 @@ public class GameManagerTest {
         PlayResult result = game.promotePawn(PromotionId.QUEEN);
 
         // Assert
-        assertEquals(PlayResult.INVALID_PROMOTION, result, "Promocionar sin una promocion pendiente deberia devolver PlayResult.INVALID_PROMOTION");
+        assertEquals(
+                PlayResult.INVALID_PROMOTION,
+                result,
+                "Promocionar sin una promocion pendiente deberia devolver"
+                        + " PlayResult.INVALID_PROMOTION");
     }
 
-    // Tablas: triple repeticion 
+    // Tablas: triple repeticion
 
     @Test
     public void movePiece_samePositionThreeTimes_shouldReturnDraw() {
@@ -98,29 +116,39 @@ public class GameManagerTest {
         GameManager game = new GameManager(board, new GameOverChecker(board, history), history);
         game.startGame();
         clearBoard(board);
-        // Con torres en juego no hay "material insuficiente": la unica causa posible de tablas es la repeticion
+        // Con dos caballos sigue habiendo material para dar mate; sus movimientos conservan el
+        // enroque.
         board.setPiece(new Position(7, 4), new King(true));
         board.setPiece(new Position(0, 4), new King(false));
-        board.setPiece(new Position(7, 0), new Rook(true));
-        board.setPiece(new Position(0, 0), new Rook(false));
+        board.setPiece(new Position(7, 1), new Knight(true));
+        board.setPiece(new Position(0, 1), new Knight(false));
 
-        Move whiteOut = new Move(new Position(7, 0), new Position(6, 0));
-        Move whiteBack = new Move(new Position(6, 0), new Position(7, 0));
-        Move blackOut = new Move(new Position(0, 0), new Position(1, 0));
-        Move blackBack = new Move(new Position(1, 0), new Position(0, 0));
+        Move whiteOut = new Move(new Position(7, 1), new Position(5, 0));
+        Move whiteBack = new Move(new Position(5, 0), new Position(7, 1));
+        Move blackOut = new Move(new Position(0, 1), new Position(2, 0));
+        Move blackBack = new Move(new Position(2, 0), new Position(0, 1));
 
-        // Act: dos ciclos completos (8 medias jugadas) hacen que la posicion inicial aparezca 3 veces
+        // Act: dos ciclos completos (8 medias jugadas) hacen que la posicion inicial aparezca 3
+        // veces
         PlayResult[] results = new PlayResult[8];
-        Move[] sequence = { whiteOut, blackOut, whiteBack, blackBack, whiteOut, blackOut, whiteBack, blackBack };
+        Move[] sequence = {
+            whiteOut, blackOut, whiteBack, blackBack, whiteOut, blackOut, whiteBack, blackBack
+        };
         for (int i = 0; i < sequence.length; i++) {
             results[i] = game.movePiece(sequence[i]);
         }
 
         // Assert
         for (int i = 0; i < 7; i++) {
-            assertEquals(PlayResult.LEGAL, results[i], "La media jugada " + (i + 1) + " no deberia terminar la partida");
+            assertEquals(
+                    PlayResult.LEGAL,
+                    results[i],
+                    "La media jugada " + (i + 1) + " no deberia terminar la partida");
         }
-        assertEquals(PlayResult.DRAW, results[7], "La tercera repeticion de la misma posicion deberia devolver PlayResult.DRAW");
+        assertEquals(
+                PlayResult.DRAW,
+                results[7],
+                "La tercera repeticion de la misma posicion deberia devolver PlayResult.DRAW");
     }
 
     @Test
@@ -133,13 +161,13 @@ public class GameManagerTest {
         clearBoard(board);
         board.setPiece(new Position(7, 4), new King(true));
         board.setPiece(new Position(0, 4), new King(false));
-        board.setPiece(new Position(7, 0), new Rook(true));
-        board.setPiece(new Position(0, 0), new Rook(false));
+        board.setPiece(new Position(7, 1), new Knight(true));
+        board.setPiece(new Position(0, 1), new Knight(false));
 
-        Move whiteOut = new Move(new Position(7, 0), new Position(6, 0));
-        Move whiteBack = new Move(new Position(6, 0), new Position(7, 0));
-        Move blackOut = new Move(new Position(0, 0), new Position(1, 0));
-        Move blackBack = new Move(new Position(1, 0), new Position(0, 0));
+        Move whiteOut = new Move(new Position(7, 1), new Position(5, 0));
+        Move whiteBack = new Move(new Position(5, 0), new Position(7, 1));
+        Move blackOut = new Move(new Position(0, 1), new Position(2, 0));
+        Move blackBack = new Move(new Position(2, 0), new Position(0, 1));
 
         // Act: un solo ciclo (4 medias jugadas) = la posicion inicial aparece 2 veces
         game.movePiece(whiteOut);
@@ -148,6 +176,9 @@ public class GameManagerTest {
         PlayResult result = game.movePiece(blackBack);
 
         // Assert
-        assertEquals(PlayResult.LEGAL, result, "Dos apariciones de la misma posicion no deberian ser tablas");
+        assertEquals(
+                PlayResult.LEGAL,
+                result,
+                "Dos apariciones de la misma posicion no deberian ser tablas");
     }
 }

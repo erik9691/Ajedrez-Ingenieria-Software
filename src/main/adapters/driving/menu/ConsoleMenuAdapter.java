@@ -1,7 +1,4 @@
-
 package main.adapters.driving.menu;
-
-import java.util.Scanner;
 
 import main.adapters.driven.display.ConsoleDisplayAdapter;
 import main.adapters.driven.input.ConsoleInputAdapter;
@@ -18,14 +15,38 @@ import main.core.time.PlayerClock;
 import main.ports.in.MatchRunnerPort;
 import main.ports.out.PlayerInputPort;
 
+import java.util.Scanner;
+
 public class ConsoleMenuAdapter {
 
-    private final Scanner scanner = ConsoleScanner.getInstance();
+    private final Scanner scanner;
+    private final java.util.function.Supplier<main.ports.out.DisplayPort> displays;
+    private final java.util.function.Supplier<PlayerInputPort> randomPlayers;
+    private final java.util.function.BiFunction<Boolean, String, PlayerInputPort> engines;
+
+    public ConsoleMenuAdapter() {
+        this(
+                ConsoleScanner.getInstance(),
+                ConsoleDisplayAdapter::new,
+                RandomMovesAI::new,
+                StockfishElevenAI::new);
+    }
+
+    public ConsoleMenuAdapter(
+            Scanner scanner,
+            java.util.function.Supplier<main.ports.out.DisplayPort> displays,
+            java.util.function.Supplier<PlayerInputPort> randomPlayers,
+            java.util.function.BiFunction<Boolean, String, PlayerInputPort> engines) {
+        this.scanner = scanner;
+        this.displays = displays;
+        this.randomPlayers = randomPlayers;
+        this.engines = engines;
+    }
 
     public void configureAndStartGame() {
 
         // Obtener configuración de la partida
-        GameOption option = chooseOption(); //Game Option -> local, AI, StockFish
+        GameOption option = chooseOption(); // Game Option -> local, AI, StockFish
 
         // Elegir control de tiempo
         PlayerClock timeControl = chooseTimeControl();
@@ -33,8 +54,8 @@ public class ConsoleMenuAdapter {
         boolean humanIsWhite = true;
 
         if (option != GameOption.LOCAL
-            && option != GameOption.STOCKFISH_VS_AI
-            && option != GameOption.STOCKFISH_VS_STOCKFISH) {
+                && option != GameOption.STOCKFISH_VS_AI
+                && option != GameOption.STOCKFISH_VS_STOCKFISH) {
             humanIsWhite = choosePlayerColor();
         }
 
@@ -45,75 +66,90 @@ public class ConsoleMenuAdapter {
         GameManager game = new GameManager(board, checker, history);
 
         // Crear adaptador de salida
-        ConsoleDisplayAdapter display = new ConsoleDisplayAdapter();
+        main.ports.out.DisplayPort display = null;
 
         // Seleccionar adaptadores de entrada
-        PlayerInputPort whiteInput;
-        PlayerInputPort blackInput;
+        PlayerInputPort whiteInput = null;
+        PlayerInputPort blackInput = null;
 
-        switch (option) {
-            case LOCAL -> {
-                whiteInput = new ConsoleInputAdapter();
-                blackInput = new ConsoleInputAdapter();
-            }
-
-            case VS_AI -> {
-                RandomMovesAI ai = new RandomMovesAI();
-
-                whiteInput = humanIsWhite ? new ConsoleInputAdapter() : ai;
-
-                blackInput = humanIsWhite ? ai : new ConsoleInputAdapter();
-            }
-
-            case VS_STOCKFISH -> {
-                String path = enginePath();
-
-                if (path == null) {
-                    throw new IllegalStateException("Sistema operativo no compatible con Stockfish.");
+        boolean started = false;
+        try {
+            switch (option) {
+                case LOCAL -> {
+                    whiteInput = new ConsoleInputAdapter(scanner);
+                    blackInput = new ConsoleInputAdapter(scanner);
                 }
 
-                StockfishElevenAI ai = new StockfishElevenAI(!humanIsWhite,path);
+                case VS_AI -> {
+                    PlayerInputPort ai = randomPlayers.get();
 
-                whiteInput = humanIsWhite ? new ConsoleInputAdapter() : ai;
+                    whiteInput = humanIsWhite ? new ConsoleInputAdapter(scanner) : ai;
 
-                blackInput = humanIsWhite ? ai : new ConsoleInputAdapter();
-            }
-
-            case STOCKFISH_VS_AI -> {
-                String path = enginePath();
-
-                if (path == null) {
-                    throw new IllegalStateException("Sistema operativo no compatible con Stockfish.");
+                    blackInput = humanIsWhite ? ai : new ConsoleInputAdapter(scanner);
                 }
 
-                whiteInput = new StockfishElevenAI(true, path);
-                blackInput = new RandomMovesAI();
-            }
+                case VS_STOCKFISH -> {
+                    String path = enginePath();
 
-            case STOCKFISH_VS_STOCKFISH -> {
-                String path = enginePath();
+                    if (path == null) {
+                        throw new IllegalStateException(
+                                "Sistema operativo no compatible con Stockfish.");
+                    }
 
-                if (path == null) {
-                    throw new IllegalStateException("Sistema operativo no compatible con Stockfish.");
+                    PlayerInputPort ai = engines.apply(!humanIsWhite, path);
+
+                    whiteInput = humanIsWhite ? new ConsoleInputAdapter(scanner) : ai;
+
+                    blackInput = humanIsWhite ? ai : new ConsoleInputAdapter(scanner);
                 }
 
-                whiteInput = new StockfishElevenAI(true, path);
-                blackInput = new StockfishElevenAI(false, path);
+                case STOCKFISH_VS_AI -> {
+                    String path = enginePath();
+
+                    if (path == null) {
+                        throw new IllegalStateException(
+                                "Sistema operativo no compatible con Stockfish.");
+                    }
+
+                    whiteInput = engines.apply(true, path);
+                    blackInput = randomPlayers.get();
+                }
+
+                case STOCKFISH_VS_STOCKFISH -> {
+                    String path = enginePath();
+
+                    if (path == null) {
+                        throw new IllegalStateException(
+                                "Sistema operativo no compatible con Stockfish.");
+                    }
+
+                    whiteInput = engines.apply(true, path);
+                    blackInput = engines.apply(false, path);
+                }
+
+                default -> throw new IllegalStateException("Modo de juego desconocido");
             }
 
-            default -> throw new IllegalStateException("Modo de juego desconocido");
+            display = displays.get();
+            // Crear y ejecutar ChessService
+            MatchRunnerPort matchRunner =
+                    new ChessService(game, display, whiteInput, blackInput, timeControl);
+
+            started = true;
+            matchRunner.runGame();
+        } finally {
+            if (!started) {
+                try {
+                    if (whiteInput != null) whiteInput.close();
+                } finally {
+                    try {
+                        if (blackInput != null && blackInput != whiteInput) blackInput.close();
+                    } finally {
+                        if (display != null) display.close();
+                    }
+                }
+            }
         }
-
-        // Crear y ejecutar ChessService
-        MatchRunnerPort matchRunner = new ChessService(
-            game,
-            display,
-            whiteInput,
-            blackInput,
-            timeControl
-        );
-
-        matchRunner.runGame();
     }
 
     private GameOption chooseOption() {
@@ -131,14 +167,22 @@ public class ConsoleMenuAdapter {
             }
 
             switch (scanner.nextLine().trim()) {
-                case "1" -> { return GameOption.LOCAL; }
-                case "2" -> { return GameOption.VS_AI; }
-                case "3" -> { return GameOption.VS_STOCKFISH; }
-                case "4" -> { return GameOption.STOCKFISH_VS_AI; }
-                case "5" -> { return GameOption.STOCKFISH_VS_STOCKFISH; }
-                default -> System.out.println(
-                    "Opción inválida. Elegí 1, 2, 3, 4 o 5."
-                );
+                case "1" -> {
+                    return GameOption.LOCAL;
+                }
+                case "2" -> {
+                    return GameOption.VS_AI;
+                }
+                case "3" -> {
+                    return GameOption.VS_STOCKFISH;
+                }
+                case "4" -> {
+                    return GameOption.STOCKFISH_VS_AI;
+                }
+                case "5" -> {
+                    return GameOption.STOCKFISH_VS_STOCKFISH;
+                }
+                default -> System.out.println("Opción inválida. Elegí 1, 2, 3, 4 o 5.");
             }
         }
     }
@@ -158,13 +202,19 @@ public class ConsoleMenuAdapter {
             }
 
             switch (scanner.nextLine().trim()) {
-                case "1" -> { return null; }
-                case "2" -> { return new PlayerClock(90 * 60_000L); }
-                case "3" -> { return new PlayerClock(30 * 60_000L); }
-                case "4" -> { return new PlayerClock(10 * 60_000L); }
-                default -> System.out.println(
-                    "Opción inválida. Elegí 1, 2, 3 o 4."
-                );
+                case "1" -> {
+                    return null;
+                }
+                case "2" -> {
+                    return new PlayerClock(90 * 60_000L);
+                }
+                case "3" -> {
+                    return new PlayerClock(30 * 60_000L);
+                }
+                case "4" -> {
+                    return new PlayerClock(10 * 60_000L);
+                }
+                default -> System.out.println("Opción inválida. Elegí 1, 2, 3 o 4.");
             }
         }
     }
@@ -177,7 +227,7 @@ public class ConsoleMenuAdapter {
                 return true;
             }
 
-            String answer = scanner.nextLine().trim().toLowerCase();
+            String answer = scanner.nextLine().trim().toLowerCase(java.util.Locale.ROOT);
 
             if (answer.equals("s")) return true;
             if (answer.equals("n")) return false;
@@ -187,7 +237,7 @@ public class ConsoleMenuAdapter {
     }
 
     private String enginePath() {
-        String os = System.getProperty("os.name", "").toLowerCase();
+        String os = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT);
 
         if (os.contains("win")) {
             return "engines/stockfish11/sf11-windows.exe";

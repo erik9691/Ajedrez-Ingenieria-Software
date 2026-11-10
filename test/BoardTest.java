@@ -1,11 +1,12 @@
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import main.core.flags.PlayResult;
 import main.core.game.Board;
 import main.core.game.MoveHistory;
 import main.core.game.pieces.Knight;
 import main.core.models.Position;
-import main.core.flags.PlayResult;
+
+import org.junit.jupiter.api.Test;
 
 public class BoardTest {
 
@@ -22,7 +23,8 @@ public class BoardTest {
 
         // Assert
         assertNotNull(retrievedPiece, "The retrieved piece should not be null");
-        assertEquals(knight, retrievedPiece, "The retrieved piece should be the exact knight placed");
+        assertEquals(
+                knight, retrievedPiece, "The retrieved piece should be the exact knight placed");
     }
 
     @Test
@@ -34,10 +36,13 @@ public class BoardTest {
         Knight knight = new Knight(true);
         board.setPiece(start, knight);
 
-           // Act
+        // Act
         PlayResult result = board.tryMove(start, outOfBoundsEnd);
 
         // Assert
-        assertEquals(PlayResult.OUT_OF_BOUNDS, result, "Moving out of bounds should return PlayResult.OUT_OF_BOUNDS");
+        assertEquals(
+                PlayResult.OUT_OF_BOUNDS,
+                result,
+                "Moving out of bounds should return PlayResult.OUT_OF_BOUNDS");
     }
 }

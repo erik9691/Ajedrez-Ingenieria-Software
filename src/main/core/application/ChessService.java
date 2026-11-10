@@ -1,147 +1,147 @@
 package main.core.application;
 
-import main.ports.in.MatchRunnerPort;
-import main.core.flags.PlayResult;
-import main.core.flags.PromotionId;
+import main.core.flags.*;
 import main.core.managers.GameManager;
 import main.core.time.PlayerClock;
-import main.ports.dto.ClockView;
-import main.ports.dto.InputResult;
-import main.ports.dto.PlayerStatus;
-import main.ports.out.DisplayPort;
-import main.ports.out.PlayerInputPort;
+import main.ports.dto.*;
+import main.ports.in.MatchRunnerPort;
+import main.ports.out.*;
 
+import java.util.concurrent.*;
+import java.util.function.Supplier;
 
-//Anteriormente, el loop (while !isGameOver) lo manejaban los adaptadores de Input de consola
-//Eso está mal, ya que un adaptador de inputs se encarga de mantener corriendo el juego
-//Todo el juego pasa por este service, y este service llama a peticiones de los Input, no al revés
-
-public class ChessService implements MatchRunnerPort{
+public class ChessService implements MatchRunnerPort {
     private final GameManager game;
     private final DisplayPort display;
-    private final PlayerInputPort whiteInput;
-    private final PlayerInputPort blackInput;
-    private final PlayerClock whiteClock;
-    private final PlayerClock blackClock;
+    private final PlayerInputPort whiteInput, blackInput;
+    private final PlayerClock whiteClock, blackClock;
+    private final ExecutorService inputWorker =
+            Executors.newSingleThreadExecutor(task -> {
+                Thread thread = new Thread(task, "chess-player-input");
+                thread.setDaemon(true);
+                return thread;
+            });
 
-    public ChessService(GameManager gameManager,
-                        DisplayPort displayPort,
-                        PlayerInputPort whitePlayerInputPort, PlayerInputPort blackPlayerInputPort,
-                        PlayerClock time) {
-        this.game = gameManager;
-        this.display = displayPort;
-        this.whiteInput = whitePlayerInputPort;
-        this.blackInput = blackPlayerInputPort;
-        
-        //Copiado para asegurar que ambos jugadores tengan el mismo reloj
-        if(time != null){
-            this.whiteClock = time.copy();
-            this.blackClock = time.copy();
-        } else{
-            this.whiteClock = null;
-            this.blackClock = null;
-        }
+    public ChessService(
+            GameManager game,
+            DisplayPort display,
+            PlayerInputPort white,
+            PlayerInputPort black,
+            PlayerClock time) {
+        this.game = game;
+        this.display = display;
+        this.whiteInput = white;
+        this.blackInput = black;
+        whiteClock = time == null ? null : time.copy();
+        blackClock = time == null ? null : time.copy();
     }
 
-    public Boolean runGame(){
-        initializeGame();
-        PlayResult result = PlayResult.NONE;
-
-        while(!result.isFinal()){
-            if(game.isWhiteTurn())
-                result = playTurn(whiteInput);
-            else
-                result = playTurn(blackInput);
-
-        }
-
-        Boolean winner = decideWinner(result);
-        display.displayGameOver(winner);
-        return winner;
-    }
-
-
-    private void initializeGame() {
-        game.startGame();
-        display.displayGameStart();
-        display.displayBoard(game.getBoardView(), createClockView());
-        display.displayTurn(game.isWhiteTurn());
-
-        //los relojes pueden venir vacios (sin limite de tiempo)
-        //La gestion de resumir y pausar el reloj lo hace cada adaptador, no el nucleo. Solamente se los seteamos.
-        //Así por ejemplo las IAs miden el tiempo diferente (-5s fijos por turno)
-        if(whiteClock != null && blackClock != null){
+    @Override
+    public Boolean runGame() {
+        try {
+            game.startGame();
             whiteInput.setClock(whiteClock);
             blackInput.setClock(blackClock);
-        }
-    }
-
-
-    private PlayResult playTurn(PlayerInputPort playerInput){
-        PlayResult currentResult = PlayResult.NONE;
-
-        InputResult playerMove = playerInput.requestMove(game.getBoardView());
-
-        if (playerMove.status() == PlayerStatus.FORFEIT) {
-            display.displayMessage(PlayResult.FORFEIT); //el jugador abandono basicamente
-            return PlayResult.FORFEIT;
-        }
-
-        if (playerMove.status() == PlayerStatus.TIME_OVER) {
-            display.displayMessage(PlayResult.TIME_OVER); //el jugador se quedo sin tiempo
-            return PlayResult.TIME_OVER;
-        }
-
-        currentResult = game.movePiece(playerMove.move());
-
-        if (!currentResult.isLegal()) {
-            display.displayMoveRejected(currentResult);
-            return currentResult;
-        }
-
-        display.displayBoard(game.getBoardView(), createClockView());
-
-        while(currentResult == PlayResult.PROMOTION_PENDING ){
-            display.displayPromotionMenu(game.getBoardView());
-            PromotionId promotedPiece = playerInput.requestPromotion(game.getBoardView());
-
-            // La entrada cerrada durante la promocion equivale a abandonar.
-            if (promotedPiece == null) {
-                display.displayMessage(PlayResult.FORFEIT);
-                return PlayResult.FORFEIT;
+            display.displayGameStart();
+            display.displayBoard(game.getBoardView(), clockView());
+            PlayResult result = PlayResult.NONE;
+            while (!result.isFinal()) {
+                display.displayTurn(game.isWhiteTurn());
+                result =
+                        playTurn(
+                                game.isWhiteTurn() ? whiteInput : blackInput,
+                                game.isWhiteTurn() ? whiteClock : blackClock);
             }
-            PlayResult promotedResult = game.promotePawn(promotedPiece);
-
-            if (!promotedResult.isLegal()) {
-                display.displayMoveRejected(promotedResult);
-                continue;
+            Boolean winner =
+                    (result == PlayResult.CHECKMATE
+                                    || result == PlayResult.FORFEIT
+                                    || result == PlayResult.TIME_OVER)
+                            ? !game.isWhiteTurn()
+                            : null;
+            display.displayGameOver(winner);
+            return winner;
+        } finally {
+            inputWorker.shutdownNow();
+            try {
+                whiteInput.close();
+            } finally {
+                try {
+                    if (blackInput != whiteInput) blackInput.close();
+                } finally {
+                    display.close();
+                }
             }
-
-            display.displayBoard(game.getBoardView(), createClockView());
-            currentResult = promotedResult;
         }
-
-        display.displayMessage(currentResult);
-
-        return currentResult;
     }
 
-
-    private Boolean decideWinner(PlayResult lastResult) {
-        if(lastResult == PlayResult.CHECKMATE || lastResult == PlayResult.FORFEIT || lastResult == PlayResult.TIME_OVER)
-            return !game.isWhiteTurn();
-
-        return null;
-    }
-
-
-    // Snapshot de los relojes para el display; null si la partida no tiene reloj.
-    private ClockView createClockView() {
-        if (whiteClock == null) {
-            return null;
+    private PlayResult playTurn(PlayerInputPort input, PlayerClock clock) {
+        try {
+            InputResult next = read(() -> input.requestMove(game.getBoardView()), clock);
+            if (next == null || next.status() == PlayerStatus.FORFEIT)
+                return announce(PlayResult.FORFEIT);
+            if (next.status() == PlayerStatus.TIME_OVER) return announce(PlayResult.TIME_OVER);
+            PlayResult result = game.movePiece(next.move());
+            if (!result.isLegal()) {
+                display.displayMoveRejected(result);
+                return result;
+            }
+            display.displayBoard(game.getBoardView(), clockView());
+            while (result == PlayResult.PROMOTION_PENDING) {
+                display.displayPromotionMenu(game.getBoardView());
+                PromotionId promotion =
+                        read(() -> input.requestPromotion(game.getBoardView()), clock);
+                if (promotion == null) return announce(PlayResult.FORFEIT);
+                result = game.promotePawn(promotion);
+                if (!result.isLegal()) {
+                    display.displayMoveRejected(result);
+                    result = PlayResult.PROMOTION_PENDING;
+                    continue;
+                }
+                display.displayBoard(game.getBoardView(), clockView());
+            }
+            return announce(result);
+        } catch (TimeExpired e) {
+            return announce(PlayResult.TIME_OVER);
         }
-        return new ClockView(whiteClock.remainingMillis(), blackClock.remainingMillis(), game.isWhiteTurn());
     }
 
+    private <T> T read(Supplier<T> request, PlayerClock clock) {
+        if (clock == null) return request.get();
+        if (clock.isExpired()) throw new TimeExpired();
+        clock.resume();
+        Future<T> pending = inputWorker.submit(request::get);
+        try {
+            T answer = pending.get(Math.max(1, clock.remainingMillis()), TimeUnit.MILLISECONDS);
+            if (clock.isExpired()) throw new TimeExpired();
+            return answer;
+        } catch (TimeoutException e) {
+            throw new TimeExpired();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Partida interrumpida", e);
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof RuntimeException runtime) throw runtime;
+            if (e.getCause() instanceof Error error) throw error;
+            throw new IllegalStateException(e.getCause());
+        } finally {
+            pending.cancel(true);
+            clock.pause();
+        }
+    }
 
+    private PlayResult announce(PlayResult result) {
+        display.displayMessage(result);
+        return result;
+    }
+
+    private ClockView clockView() {
+        return whiteClock == null
+                ? null
+                : new ClockView(
+                        whiteClock.remainingMillis(),
+                        blackClock.remainingMillis(),
+                        game.isWhiteTurn());
+    }
+
+    private static class TimeExpired extends RuntimeException {}
 }
